@@ -1,72 +1,403 @@
--- Ensure LocalPlayer is loaded
-local LP = game.Players.LocalPlayer
-if not LP then
-    game.Players.PlayerAdded:Wait()
-    LP = game.Players.LocalPlayer
+-- CONFIG
+local UIS, TS, RS, Players = game:GetService("UserInputService"), game:GetService("TweenService"), game:GetService("RunService"), game:GetService("Players")
+
+-- Attendre que LocalPlayer soit chargé
+local LP = Players.LocalPlayer or Players:GetPropertyChangedSignal("LocalPlayer"):Wait()
+local Mouse = LP:GetMouse()
+local Cam = workspace.CurrentCamera
+
+local Keys = {ToggleGUI = Enum.KeyCode.M, TriggerBot = Enum.KeyCode.C, SilentAim = Enum.KeyCode.V, TargetAim = Enum.KeyCode.Q, AimAssist = Enum.KeyCode.X}
+local States = {TriggerBot = false, SilentAim = false, TargetAim = false, AimAssist = false}
+local Settings = {FOV = 360, Prediction = 0.13544, SilentHitPart = "Head", SilentOffset = 0}
+getgenv().Radius = Settings.FOV
+
+-- Liste complète des jeux
+local List = {
+    [16469595315] = {'Del Hood', 'UpdateMousePos', 'MainEvent'},
+    [17319408836] = {'OG Da Hood', 'UpdateMousePos', 'MainEvent'},
+    [14975320521] = {'Ar Hood', 'UpdateMousePos', 'MainEvent'},
+    [17200018150] = {'Hood Of AR', 'UpdateMousePos', 'MainEvent'},
+    [15644861772] = {'Flame Hood', 'UpdatQeMousePos', 'MainEvent'},
+    [17723797487] = {'Dee Hood', 'UpdateMousePosI', 'MainEvent'},
+    [17897702920] = {'Og Da Hood', 'UpdateMousePos', 'MainEvent'},
+    [17809101348] = {'New Hood', 'UpdateMousePos', 'MainEvent'},
+    [17344804827] = {'Yeno Hood', 'UpdateMousePos', 'MainEvent'},
+    [16435867341] = {'Mad Hood', 'UpdateMousePos', 'MainEvent'},
+    [14412601883] = {'Hood Bank', 'MOUSE', 'MAINEVENT'},
+    [14412436145] = {'Da Uphill', 'MOUSE', 'MAINEVENT'},
+    [14487637618] = {'Da Hood Bot Aim Trainer', 'MOUSE', 'MAINEVENT'},
+    [11143225577] = {'1v1 Hood Aim Trainer', 'UpdateMousePos', 'MainEvent'},
+    [14413712255] = {'Hood Aim', 'MOUSE', 'MAINEVENT'},
+    [12927359803] = {'Dah Aim Trainer', 'UpdateMousePos', 'MainEvent'},
+    [12867571492] = {'Katana Hood', 'UpdateMousePos', 'MainEvent'},
+    [11867820563] = {'Dae Hood', 'UpdateMousePos', 'MainEvent'},
+    [17109142105] = {'Da Battles', 'MoonUpdateMousePos', 'MainEvent'},
+    [15186202290] = {'Da Strike', 'MOUSE', 'MAINEVENT'},
+    [2788229376] = {'Da Hood', 'UpdateMousePosI', 'MainEvent'},
+    [16033173781] = {'Da Hood Macro', 'UpdateMousePosI', 'MainEvent'},
+    [7213786345] = {'Da Hood VC', 'UpdateMousePosI', 'MainEvent'},
+    [9825515356] = {'Hood Customs', 'MousePosUpdate', 'MainEvent'},
+    [17895632819] = {'Hood Spirit', 'UpdateMousePos', 'MainEvent'},
+    [5602055394] = {'Hood Modded', 'MousePos', 'Bullets'},
+    [7951883376] = {'Hood Modded VC', 'MousePos', 'Bullets'},
+    [9183932460] = {'Untitled Hood', 'UpdateMousePos', '.gg/untitledhood'},
+    [14412355918] = {'Da Downhill', 'MOUSE', 'MAINEVENT'}
+}
+
+-- Utility Functions
+local utility = {
+    Renders = {},
+    LastTick = tick(),
+}
+
+-- Lynx Functions (utilisé comme base pour intégrer Osiris)
+local Lynx = {
+    Connections = {},
+    Silent = {
+        Target = nil,
+        HitPart = nil,
+        Prediction = 0,
+        Position = nil,
+    },
+    Assist = {
+        Target = nil,
+        Prediction = 0,
+    }
+}
+
+-- Connection Function
+function Lynx:Connection(signal, callback)
+    local connection = signal:Connect(callback)
+    table.insert(self.Connections, connection)
+    return connection
 end
 
--- Rest of the variable declarations (unchanged)
-local TS = game:GetService("TweenService")
-local UIS = game:GetService("UserInputService")
-local RS = game:GetService("RunService")
-local Camera = workspace.CurrentCamera
-local Lighting = game:GetService("Lighting")
-
--- Drawing circle setup (add a check for Drawing library)
-local circle
-if Drawing then
-    circle = Drawing.new("Circle")
-    circle.Thickness = 1
-    circle.NumSides = 100
-    circle.Radius = Settings.AimAssistFOV
-    circle.Visible = false
-    circle.Color = Settings.FOVColor
-    circle.Filled = false
-else
-    warn("Drawing library not available. Circle will not be drawn.")
+-- Validate Client
+function Lynx:ValidateClient(player)
+    local char = player.Character
+    local humanoid = char and char:FindFirstChild("Humanoid")
+    local rootPart = char and char:FindFirstChild("HumanoidRootPart")
+    return char, humanoid, rootPart
 end
 
--- Main frame setup (fix the syntax error on line 176)
-local mainFrame = Instance.new("Frame")
-mainFrame.Size = UDim2.new(0, 400, 0, 500)
-mainFrame.Position = UDim2.new(0.5, -200, 0.5, -250)
-mainFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
-mainFrame.BorderSizePixel = 0 -- Fixed the typo here
-mainFrame.ClipsDescendants = true
-mainFrame.Parent = gui
-mainFrame.Active = false
-mainFrame.Selectable = false
-
--- Aiming logic (add nil checks in RenderStepped)
-RS.RenderStepped:Connect(function()
-    if isUnlocked then
-        if circle then
-            circle.Position = UIS:GetMouseLocation()
-        end
-        if States.AimAssist and isTargeting and lockedTarget and lockedTarget.Character and lockedTarget.Character:FindFirstChild("Head") then
-            local head = lockedTarget.Character.Head
-            local predictedPos = head.Position + head.Parent.HumanoidRootPart.Velocity * Settings.Prediction
-            local screenPos, onScreen = Camera:WorldToViewportPoint(predictedPos)
-            local rayOrigin = Camera.CFrame.Position
-            local rayDirection = (predictedPos - rayOrigin).Unit * Settings.AimAssistMaxDistance
-            local raycastParams = RaycastParams.new()
-            raycastParams.FilterDescendantsInstances = {LP.Character}
-            raycastParams.FilterType = Enum.RaycastFilterType.Blacklist
-            local result = workspace:Raycast(rayOrigin, rayDirection, raycastParams)
-            if onScreen and (not result or result.Instance:IsDescendantOf(lockedTarget.Character)) then
-                local mousePos = UIS:GetMouseLocation()
-                local targetPos = Vector2.new(screenPos.X, screenPos.Y)
-                local distance = (targetPos - mousePos).Magnitude
-                if distance <= Settings.AimAssistFOV then
-                    local currentCFrame = Camera.CFrame
-                    local newCFrame = CFrame.new(currentCFrame.Position, predictedPos)
-                    Camera.CFrame = currentCFrame:Lerp(newCFrame, Settings.AimAssistSmoothness)
-                else
-                    lockedTarget = nil
+-- Get Closest Player
+function Lynx:GetClosestPlayer()
+    local closest, dist = nil, getgenv().Radius * 3
+    for _, p in ipairs(Players:GetPlayers()) do
+        if p ~= LP and p.Character and p.Character.Humanoid and p.Character.Humanoid.Health > 1 then
+            local root = p.Character.HumanoidRootPart
+            if root then
+                local pos, vis = Cam:WorldToViewportPoint(root.Position)
+                if vis and (Vector2.new(Mouse.X, Mouse.Y) - Vector2.new(pos.X, pos.Y)).Magnitude < dist then
+                    closest = p
+                    dist = (Vector2.new(Mouse.X, Mouse.Y) - Vector2.new(pos.X, pos.Y)).Magnitude
                 end
-            else
-                lockedTarget = nil
             end
         end
     end
+    return closest
+end
+
+-- Get Closest Part
+function Lynx:GetClosestPart(player, hitPart)
+    local char = player.Character
+    if not char then return nil end
+    local parts = {"Head", "HumanoidRootPart", "LeftUpperArm", "RightUpperArm", "LeftLowerArm", "RightLowerArm", "LeftHand", "RightHand", "LeftUpperLeg", "RightUpperLeg", "LeftLowerLeg", "RightLowerLeg", "LeftFoot", "RightFoot"}
+    local closestPart, minDist = nil, math.huge
+    for _, partName in ipairs(parts) do
+        local part = char:FindFirstChild(partName)
+        if part then
+            local dist = (Mouse.Hit.Position - part.Position).Magnitude
+            if dist < minDist then
+                minDist = dist
+                closestPart = part
+            end
+        end
+    end
+    return closestPart or char:FindFirstChild(hitPart) or char.HumanoidRootPart
+end
+
+-- Get Player Status
+function Lynx:GetPlayerStatus(player)
+    local char, humanoid, rootPart = self:ValidateClient(player or LP)
+    return char and humanoid and rootPart and humanoid.Health > 0
+end
+
+-- Auto Prediction
+function Lynx:AutoPrediction()
+    local pingvalue = game:GetService("Stats").Network.ServerStatsItem["Data Ping"]:GetValueString()
+    local split = string.split(pingvalue, '(')
+    local ping = tonumber(split[1])
+    local prediction = ping / 1000 * 2.5
+    return prediction
+end
+
+-- Silent Aim (Osiris)
+function Lynx:SilentAim()
+    if States.SilentAim then
+        local target = self:GetClosestPlayer()
+        if target and self:GetPlayerStatus(target) then
+            Lynx.Silent.Target = target
+            Lynx.Silent.HitPart = Settings.SilentHitPart
+            Lynx.Silent.Prediction = self:AutoPrediction()
+
+            local char, humanoid, rootPart = self:ValidateClient(target)
+            if char and humanoid and rootPart then
+                local hitPart = self:GetClosestPart(target, Lynx.Silent.HitPart)
+                if hitPart then
+                    local pos = hitPart.Position + (rootPart.Velocity * Lynx.Silent.Prediction)
+                    local l = List[game.PlaceId] or {"UpdateMousePos", "MainEvent"}
+                    game.ReplicatedStorage[l[2]]:FireServer(l[1], pos)
+                    Lynx.Silent.Position = pos
+                end
+            end
+        else
+            Lynx.Silent.Target = nil
+        end
+    else
+        Lynx.Silent.Target = nil
+    end
+end
+
+-- Aim Assist (Osiris)
+function Lynx:AimAssist()
+    if States.AimAssist then
+        local target = self:GetClosestPlayer()
+        if target and self:GetPlayerStatus(target) then
+            Lynx.Assist.Target = target
+            Lynx.Assist.Prediction = self:AutoPrediction()
+
+            local char, humanoid, rootPart = self:ValidateClient(target)
+            if char and humanoid and rootPart then
+                local hitPart = self:GetClosestPart(target, "Head")
+                local prediction = Lynx.Assist.Prediction
+
+                local pos, onScreen = Cam:WorldToViewportPoint(hitPart.Position)
+                local mousePos = Vector2.new(Mouse.X, Mouse.Y + 36)
+                local magn = (mousePos - Vector2.new(pos.X, pos.Y)).Magnitude
+
+                if magn > Settings.FOV then return end
+                if not onScreen then return end
+
+                -- Ajustement direct de la caméra avec prédiction
+                local targetPos = hitPart.Position + (rootPart.Velocity * prediction)
+                Cam.CFrame = CFrame.new(Cam.CFrame.Position, targetPos)
+            end
+        else
+            Lynx.Assist.Target = nil
+        end
+    else
+        Lynx.Assist.Target = nil
+    end
+end
+
+-- TriggerBot
+task.spawn(function()
+    while true do
+        if States.TriggerBot and Mouse.Target and Players:GetPlayerFromCharacter(Mouse.Target.Parent) then
+            local tool = LP.Character and LP.Character:FindFirstChildOfClass("Tool")
+            if tool and tool:FindFirstChild("Handle") then tool:Activate() end
+        end
+        RS.Heartbeat:Wait()
+    end
 end)
+
+-- Target Aim
+local ta = {target = nil, targeting = false}
+function ta.get()
+    local r, mp = 500, UIS:GetMouseLocation()
+    for _, p in ipairs(Players:GetPlayers()) do
+        if p ~= LP and p.Character and p.Character.HumanoidRootPart then
+            local vp = Cam:WorldToViewportPoint(p.Character.HumanoidRootPart.Position)
+            if r > (Vector2.new(vp.X, vp.Y) - mp).Magnitude then
+                r = (Vector2.new(vp.X, vp.Y) - mp).Magnitude
+                ta.target = p
+            end
+        end
+    end
+end
+
+function ta.shoot()
+    if States.TargetAim and ta.targeting and ta.target and ta.target.Character then
+        local part = getClosestPart(ta.target.Character)
+        if part then
+            local pos = getNearestNewgenScalar(part)
+            local l = List[game.PlaceId] or {"UpdateMousePos", "MainEvent"}
+            game.ReplicatedStorage[l[2]]:FireServer(l[1], pos)
+        end
+    end
+end
+
+-- GUI (Ancien style avec boutons ON/OFF)
+local gui = Instance.new("ScreenGui")
+gui.Name = "clx_x_sajid"
+gui.Parent = LP:WaitForChild("PlayerGui")
+gui.ResetOnSpawn = false
+
+local mainFrame = Instance.new("Frame")
+mainFrame.Size = UDim2.new(0, 200, 0, 200)
+mainFrame.Position = UDim2.new(0.5, -100, 0.5, -100)
+mainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+mainFrame.BorderSizePixel = 0
+mainFrame.Parent = gui
+
+local titleLabel = Instance.new("TextLabel")
+titleLabel.Size = UDim2.new(1, 0, 0, 30)
+titleLabel.Position = UDim2.new(0, 0, 0, 0)
+titleLabel.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+titleLabel.Text = "clx x sajid"
+titleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+titleLabel.TextSize = 16
+titleLabel.Font = Enum.Font.GothamBold
+titleLabel.Parent = mainFrame
+
+local uiListLayout = Instance.new("UIListLayout")
+uiListLayout.Padding = UDim.new(0, 5)
+uiListLayout.SortOrder = Enum.SortOrder.LayoutOrder
+uiListLayout.Parent = mainFrame
+
+local uiPadding = Instance.new("UIPadding")
+uiPadding.PaddingTop = UDim.new(0, 35)
+uiPadding.Parent = mainFrame
+
+-- Fonction pour créer un bouton ON/OFF
+local function createButton(name, layoutOrder, callback)
+    local button = Instance.new("TextButton")
+    button.Size = UDim2.new(1, -10, 0, 30)
+    button.Position = UDim2.new(0, 5, 0, 0)
+    button.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+    button.Text = name .. ": OFF"
+    button.TextColor3 = Color3.fromRGB(255, 255, 255)
+    button.TextSize = 14
+    button.Font = Enum.Font.Gotham
+    button.LayoutOrder = layoutOrder
+    button.Parent = mainFrame
+
+    button.MouseButton1Click:Connect(function()
+        callback(button)
+    end)
+
+    return button
+end
+
+-- Création des boutons
+local tbBtn = createButton("TriggerBot", 1, function(button)
+    States.TriggerBot = not States.TriggerBot
+    button.Text = "TriggerBot: " .. (States.TriggerBot and "ON" or "OFF")
+end)
+
+local saBtn = createButton("Silent Aim", 2, function(button)
+    States.SilentAim = not States.SilentAim
+    button.Text = "Silent Aim: " .. (States.SilentAim and "ON" or "OFF")
+end)
+
+local aimAssistBtn = createButton("Aim Assist", 3, function(button)
+    States.AimAssist = not States.AimAssist
+    button.Text = "Aim Assist: " .. (States.AimAssist and "ON" or "OFF")
+end)
+
+local taBtn = createButton("Target Aim", 4, function(button)
+    States.TargetAim = not States.TargetAim
+    button.Text = "Target Aim: " .. (States.TargetAim and "ON" or "OFF") .. " (Q)"
+end)
+
+-- Drag functionality for GUI
+local dragging, dragInput, dragStart, startPos
+mainFrame.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        dragging = true
+        dragStart = input.Position
+        startPos = mainFrame.Position
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then
+                dragging = false
+            end
+        end)
+    end
+end)
+
+mainFrame.InputChanged:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseMovement then
+        dragInput = input
+    end
+end)
+
+UIS.InputChanged:Connect(function(input)
+    if input == dragInput and dragging then
+        local delta = input.Position - dragStart
+        mainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+    end
+end)
+
+-- Input Handling
+UIS.InputBegan:Connect(function(i, gp)
+    if not gp and i.KeyCode == Keys.TargetAim then
+        ta.targeting = not ta.targeting
+        if ta.targeting then ta.get() else ta.target = nil end
+    elseif not gp and i.KeyCode == Keys.AimAssist then
+        States.AimAssist = not States.AimAssist
+        aimAssistBtn.Text = "Aim Assist: " .. (States.AimAssist and "ON" or "OFF")
+    elseif not gp and i.KeyCode == Keys.ToggleGUI then
+        mainFrame.Visible = not mainFrame.Visible
+    elseif not gp and i.KeyCode == Keys.SilentAim then
+        States.SilentAim = not States.SilentAim
+        saBtn.Text = "Silent Aim: " .. (States.SilentAim and "ON" or "OFF")
+    end
+end)
+
+LP.CharacterAdded:Connect(function(c)
+    c.ChildAdded:Connect(function(t)
+        if t:IsA("Tool") then t.Activated:Connect(ta.shoot) end
+    end)
+end)
+
+if LP.Character then
+    for _, t in ipairs(LP.Character:GetChildren()) do
+        if t:IsA("Tool") then t.Activated:Connect(ta.shoot) end
+    end
+end
+
+RS.RenderStepped:Connect(function()
+    if States.TargetAim and ta.targeting then ta.shoot() end
+    Lynx:SilentAim()
+    Lynx:AimAssist()
+end)
+
+-- FOV CIRCLE
+local circle = Drawing.new("Circle")
+circle.Visible, circle.Color, circle.Thickness, circle.Transparency, circle.Radius, circle.Filled = true, Color3.fromRGB(255, 255, 255), 2, 0.7, getgenv().Radius, false
+RS.RenderStepped:Connect(function()
+    circle.Position = Vector2.new(Mouse.X, Mouse.Y)
+    circle.Radius = getgenv().Radius
+end)
+
+-- Nearest Point (NewgenScalar)
+local function getNearestNewgenScalar(part)
+    if part and part:IsA("BasePart") then
+        local localHit = part.CFrame:PointToObjectSpace(Mouse.Hit.Position)
+        local clampedPosition = Vector3.new(
+            math.clamp(localHit.X, -part.Size.X * 0.5, part.Size.X * 0.5),
+            math.clamp(localHit.Y, -part.Size.Y * 0.5, part.Size.Y * 0.5),
+            math.clamp(localHit.Z, -part.Size.Z * 0.5, part.Size.Z * 0.5)
+        )
+        return part.CFrame:PointToWorldSpace(clampedPosition)
+    end
+    return part.Position -- Fallback si la partie n'est pas un BasePart
+end
+
+-- Fonction pour trouver la partie la plus proche
+local function getClosestPart(character)
+    local parts = {"Head", "HumanoidRootPart", "LeftUpperArm", "RightUpperArm", "LeftLowerArm", "RightLowerArm", "LeftHand", "RightHand", "LeftUpperLeg", "RightUpperLeg", "LeftLowerLeg", "RightLowerLeg", "LeftFoot", "RightFoot"}
+    local closestPart, minDist = nil, math.huge
+    for _, partName in ipairs(parts) do
+        local part = character:FindFirstChild(partName)
+        if part then
+            local dist = (Mouse.Hit.Position - part.Position).Magnitude
+            if dist < minDist then
+                minDist = dist
+                closestPart = part
+            end
+        end
+    end
+    return closestPart or character.HumanoidRootPart
+end
