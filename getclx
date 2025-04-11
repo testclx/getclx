@@ -33,38 +33,6 @@ circle.Visible = false
 circle.Color = Settings.FOVColor
 circle.Filled = false
 
-local List = {
-    [16469595315] = {'Del Hood', 'UpdateMousePos', 'MainEvent'},
-    [17319408836] = {'OG Da Hood', 'UpdateMousePos', 'MainEvent'},
-    [14975320521] = {'Ar Hood', 'UpdateMousePos', 'MainEvent'},
-    [17200018150] = {'Hood Of AR', 'UpdateMousePos', 'MainEvent'},
-    [15644861772] = {'Flame Hood', 'UpdatQeMousePos', 'MainEvent'},
-    [17723797487] = {'Dee Hood', 'UpdateMousePosI', 'MainEvent'},
-    [17897702920] = {'Og Da Hood', 'UpdateMousePos', 'MainEvent'},
-    [17809101348] = {'New Hood', 'UpdateMousePos', 'MainEvent'},
-    [17344804827] = {'Yeno Hood', 'UpdateMousePos', 'MainEvent'},
-    [16435867341] = {'Mad Hood', 'UpdateMousePos', 'MainEvent'},
-    [14412601883] = {'Hood Bank', 'MOUSE', 'MAINEVENT'},
-    [14412436145] = {'Da Uphill', 'MOUSE', 'MAINEVENT'},
-    [14487637618] = {'Da Hood Bot Aim Trainer', 'MOUSE', 'MAINEVENT'},
-    [11143225577] = {'1v1 Hood Aim Trainer', 'UpdateMousePos', 'MainEvent'},
-    [14413712255] = {'Hood Aim', 'MOUSE', 'MAINEVENT'},
-    [12927359803] = {'Dah Aim Trainer', 'UpdateMousePos', 'MainEvent'},
-    [12867571492] = {'Katana Hood', 'UpdateMousePos', 'MainEvent'},
-    [11867820563] = {'Dae Hood', 'UpdateMousePos', 'MainEvent'},
-    [17109142105] = {'Da Battles', 'MoonUpdateMousePos', 'MainEvent'},
-    [15186202290] = {'Da Strike', 'MOUSE', 'MAINEVENT'},
-    [2788229376] = {'Da Hood', 'UpdateMousePosI', 'MainEvent'},
-    [16033173781] = {'Da Hood Macro', 'UpdateMousePosI', 'MainEvent'},
-    [7213786345] = {'Da Hood VC', 'UpdateMousePosI', 'MainEvent'},
-    [9825515356] = {'Hood Customs', 'MousePosUpdate', 'MainEvent'},
-    [17895632819] = {'Hood Spirit', 'UpdateMousePos', 'MainEvent'},
-    [5602055394] = {'Hood Modded', 'MousePos', 'Bullets'},
-    [7951883376] = {'Hood Modded VC', 'MousePos', 'Bullets'},
-    [9183932460] = {'Untitled Hood', 'UpdateMousePos', '.gg/untitledhood'},
-    [14412355918] = {'Da Downhill', 'MOUSE', 'MAINEVENT'}
-}
-
 local gui = Instance.new("ScreenGui")
 gui.Name = "clx_x_sajid"
 gui.Parent = LP:WaitForChild("PlayerGui")
@@ -87,7 +55,7 @@ lockFrame.Visible = true
 local lockImage = Instance.new("ImageLabel")
 lockImage.Size = UDim2.new(1, 0, 1, 0)
 lockImage.BackgroundTransparency = 1
-lockImage.Image = "rbxassetid://3926305904" -- Image d'un cadenas
+lockImage.Image = "rbxassetid://3926305904"
 lockImage.ImageRectOffset = Vector2.new(524, 204)
 lockImage.ImageRectSize = Vector2.new(36, 36)
 lockImage.ImageColor3 = Color3.fromRGB(255, 0, 0)
@@ -205,7 +173,7 @@ mainFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
 mainFrame.BorderSizePixel = 0
 mainFrame.ClipsDescendants = true
 mainFrame.Parent = gui
-mainFrame.Active = false -- Désactivé au départ
+mainFrame.Active = false
 mainFrame.Selectable = false
 
 local uiCorner = Instance.new("UICorner")
@@ -239,7 +207,7 @@ scrollingFrame.BackgroundTransparency = 1
 scrollingFrame.BorderSizePixel = 0
 scrollingFrame.ScrollBarThickness = 6
 scrollingFrame.ScrollBarImageColor3 = Color3.fromRGB(255, 0, 0)
-scrollingFrame.CanvasSize = UDim2.new(0, 0, 0, 1200)
+scrollingFrame.CanvasSize = UDim2.new(0, 0, 0, 400) -- Réduit car moins de contenu
 scrollingFrame.Visible = true
 scrollingFrame.Parent = mainFrame
 
@@ -292,27 +260,22 @@ local isUnlocked = false
 submitButton.MouseButton1Click:Connect(function()
     local enteredKey = keyInput.Text
     if enteredKey == correctKey then
-        -- Animation de succès
         statusLabel.Text = "✅"
         statusLabel.TextColor3 = Color3.fromRGB(0, 255, 0)
         TS:Create(statusLabel, TweenInfo.new(0.5, Enum.EasingStyle.Bounce), {TextTransparency = 0, Position = UDim2.new(0.5, -25, 0.7, 0)}):Play()
         wait(1)
-        -- Disparition du GUI de la clé
         TS:Create(keyFrame, TweenInfo.new(0.5, Enum.EasingStyle.Quart), {Position = UDim2.new(0.5, -150, 1, 0)}):Play()
         wait(0.5)
         keyGui:Destroy()
-        -- Animation de déverrouillage
         TS:Create(lockImage, TweenInfo.new(0.5, Enum.EasingStyle.Quad), {Rotation = 360, ImageTransparency = 1}):Play()
         TS:Create(lockFrame, TweenInfo.new(0.5, Enum.EasingStyle.Quad), {BackgroundTransparency = 1}):Play()
         wait(0.5)
         lockFrame:Destroy()
-        -- Suppression du flou et activation du GUI principal
         blurEffect:Destroy()
         mainFrame.Active = true
         mainFrame.Selectable = true
         isUnlocked = true
     else
-        -- Animation d'échec
         statusLabel.Text = "❌"
         statusLabel.TextColor3 = Color3.fromRGB(255, 0, 0)
         TS:Create(statusLabel, TweenInfo.new(0.3, Enum.EasingStyle.Bounce), {TextTransparency = 0}):Play()
@@ -323,7 +286,6 @@ submitButton.MouseButton1Click:Connect(function()
     end
 end)
 
--- Le reste du code reste inchangé
 local function createButton(name, layoutOrder, callback)
     local buttonFrame = Instance.new("Frame")
     buttonFrame.Size = UDim2.new(1, 0, 0, 40)
@@ -372,53 +334,63 @@ local function createKeySelector(name, layoutOrder, defaultKey, callback)
     frame.Parent = scrollingFrame
 
     local label = Instance.new("TextLabel")
-    label.Size = UDim2.new(0.5, 0, 1, 0)
+    label.Size = UDim2.new(0.4, 0, 1, 0)
     label.BackgroundTransparency = 1
-    label.Text = name .. " Key: "
+    label.Text = name .. ":"
     label.TextColor3 = Color3.fromRGB(255, 255, 255)
     label.TextSize = 16
     label.Font = Enum.Font.Gotham
     label.TextXAlignment = Enum.TextXAlignment.Left
     label.Parent = frame
 
-    local keyButtonFrame = Instance.new("Frame")
-    keyButtonFrame.Size = UDim2.new(0.5, 0, 1, 0)
-    keyButtonFrame.Position = UDim2.new(0.5, 0, 0, 0)
-    keyButtonFrame.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
-    keyButtonFrame.Parent = frame
+    local keyBox = Instance.new("TextBox")
+    keyBox.Size = UDim2.new(0.3, 0, 1, 0)
+    keyBox.Position = UDim2.new(0.4, 0, 0, 0)
+    keyBox.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+    keyBox.Text = tostring(defaultKey.Name)
+    keyBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+    keyBox.TextSize = 16
+    keyBox.Font = Enum.Font.Gotham
+    keyBox.TextEditable = false
+    keyBox.Parent = frame
+
+    local keyBoxCorner = Instance.new("UICorner")
+    keyBoxCorner.CornerRadius = UDim.new(0, 8)
+    keyBoxCorner.Parent = keyBox
+
+    local keyButton = Instance.new("TextButton")
+    keyButton.Size = UDim2.new(0.2, 0, 1, 0)
+    keyButton.Position = UDim2.new(0.75, 0, 0, 0)
+    keyButton.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
+    keyButton.Text = "Change"
+    keyButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+    keyButton.TextSize = 14
+    keyButton.Font = Enum.Font.GothamBold
+    keyButton.Parent = frame
 
     local keyButtonCorner = Instance.new("UICorner")
     keyButtonCorner.CornerRadius = UDim.new(0, 8)
-    keyButtonCorner.Parent = keyButtonFrame
-
-    local keyButton = Instance.new("TextButton")
-    keyButton.Size = UDim2.new(1, 0, 1, 0)
-    keyButton.BackgroundTransparency = 1
-    keyButton.Text = tostring(defaultKey.Name)
-    keyButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-    keyButton.TextSize = 16
-    keyButton.Font = Enum.Font.Gotham
-    keyButton.Parent = keyButtonFrame
+    keyButtonCorner.Parent = keyButton
 
     keyButton.MouseEnter:Connect(function()
         if isUnlocked then
-            TS:Create(keyButtonFrame, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(255, 0, 0)}):Play()
+            TS:Create(keyButton, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(200, 0, 0)}):Play()
         end
     end)
     keyButton.MouseLeave:Connect(function()
         if isUnlocked then
-            TS:Create(keyButtonFrame, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(40, 40, 40)}):Play()
+            TS:Create(keyButton, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(255, 0, 0)}):Play()
         end
     end)
 
     keyButton.MouseButton1Click:Connect(function()
         if isUnlocked then
-            keyButton.Text = "Press Key..."
+            keyBox.Text = "Press a key..."
             local conn
             conn = UIS.InputBegan:Connect(function(input)
                 if input.UserInputType == Enum.UserInputType.Keyboard then
                     callback(input.KeyCode)
-                    keyButton.Text = tostring(input.KeyCode.Name)
+                    keyBox.Text = tostring(input.KeyCode.Name)
                     conn:Disconnect()
                 end
             end)
@@ -427,6 +399,7 @@ local function createKeySelector(name, layoutOrder, defaultKey, callback)
     return frame
 end
 
+-- Boutons principaux
 local tbBtn = createButton("TriggerBot", 1, function(button)
     States.TriggerBot = not States.TriggerBot
     button.Text = "TriggerBot: " .. (States.TriggerBot and "ON" or "OFF")
@@ -500,6 +473,7 @@ local taBtn = createButton("Target Aim", 5, function(button)
     button.Text = "Target Aim: " .. (States.TargetAim and "ON" or "OFF")
 end)
 
+-- Séparateur
 local separator = Instance.new("Frame")
 separator.Size = UDim2.new(1, 0, 0, 2)
 separator.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
@@ -507,81 +481,23 @@ separator.BorderSizePixel = 0
 separator.LayoutOrder = 6
 separator.Parent = scrollingFrame
 
-local gamesTitle = Instance.new("TextLabel")
-gamesTitle.Size = UDim2.new(1, 0, 0, 30)
-gamesTitle.BackgroundTransparency = 1
-gamesTitle.Text = "Compatible Games"
-gamesTitle.TextColor3 = Color3.fromRGB(255, 0, 0)
-gamesTitle.TextSize = 20
-gamesTitle.Font = Enum.Font.GothamBold
-gamesTitle.TextXAlignment = Enum.TextXAlignment.Left
-gamesTitle.LayoutOrder = 7
-gamesTitle.Parent = scrollingFrame
+-- Titre pour la section des touches
+local keysTitle = Instance.new("TextLabel")
+keysTitle.Size = UDim2.new(1, 0, 0, 30)
+keysTitle.BackgroundTransparency = 1
+keysTitle.Text = "Keybinds"
+keysTitle.TextColor3 = Color3.fromRGB(255, 0, 0)
+keysTitle.TextSize = 20
+keysTitle.Font = Enum.Font.GothamBold
+keysTitle.TextXAlignment = Enum.TextXAlignment.Left
+keysTitle.LayoutOrder = 7
+keysTitle.Parent = scrollingFrame
 
-local gameCount = 0
-for placeId, gameInfo in pairs(List) do
-    gameCount = gameCount + 1
-    local gameFrame = Instance.new("Frame")
-    gameFrame.Size = UDim2.new(1, 0, 0, 40)
-    gameFrame.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
-    gameFrame.BorderSizePixel = 0
-    gameFrame.LayoutOrder = 7 + gameCount
-    gameFrame.Parent = scrollingFrame
-
-    local gameCorner = Instance.new("UICorner")
-    gameCorner.CornerRadius = UDim.new(0, 8)
-    gameCorner.Parent = gameFrame
-
-    local gameLabel = Instance.new("TextLabel")
-    gameLabel.Size = UDim2.new(1, 0, 1, 0)
-    gameLabel.BackgroundTransparency = 1
-    gameLabel.Text = gameInfo[1] .. (game.PlaceId == placeId and " (Current)" or "")
-    gameLabel.TextColor3 = game.PlaceId == placeId and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 255, 255)
-    gameLabel.TextSize = 16
-    gameLabel.Font = Enum.Font.Gotham
-    gameLabel.TextXAlignment = Enum.TextXAlignment.Left
-    gameLabel.Parent = gameFrame
-
-    local teleportButton = Instance.new("TextButton")
-    teleportButton.Size = UDim2.new(0, 80, 1, 0)
-    teleportButton.Position = UDim2.new(1, -90, 0, 0)
-    teleportButton.BackgroundTransparency = 1
-    teleportButton.Text = "Teleport"
-    teleportButton.TextColor3 = Color3.fromRGB(255, 0, 0)
-    teleportButton.TextSize = 14
-    teleportButton.Font = Enum.Font.GothamBold
-    teleportButton.Parent = gameFrame
-    teleportButton.Visible = game.PlaceId ~= placeId
-
-    teleportButton.MouseEnter:Connect(function()
-        if isUnlocked then
-            TS:Create(gameFrame, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(255, 0, 0)}):Play()
-        end
-    end)
-    teleportButton.MouseLeave:Connect(function()
-        if isUnlocked then
-            TS:Create(gameFrame, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(40, 40, 40)}):Play()
-        end
-    end)
-
-    teleportButton.MouseButton1Click:Connect(function()
-        if isUnlocked then
-            game:GetService("TeleportService"):Teleport(placeId, LP)
-        end
-    end)
-end
-
-local separator2 = Instance.new("Frame")
-separator2.Size = UDim2.new(1, 0, 0, 2)
-separator2.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
-separator2.BorderSizePixel = 0
-separator2.LayoutOrder = 7 + gameCount + 1
-separator2.Parent = scrollingFrame
-
-createKeySelector("TriggerBot", 7 + gameCount + 2, Keys.TriggerBot, function(newKey) Keys.TriggerBot = newKey end)
-createKeySelector("SilentAim", 7 + gameCount + 3, Keys.SilentAim, function(newKey) Keys.SilentAim = newKey end)
-createKeySelector("AimAssist", 7 + gameCount + 4, Keys.AimAssist, function(newKey) Keys.AimAssist = newKey end)
-createKeySelector("TargetAim", 7 + gameCount + 5, Keys.TargetAim, function(newKey) Keys.TargetAim = newKey end)
+-- Sélecteurs de touches
+createKeySelector("TriggerBot", 8, Keys.TriggerBot, function(newKey) Keys.TriggerBot = newKey end)
+createKeySelector("SilentAim", 9, Keys.SilentAim, function(newKey) Keys.SilentAim = newKey end)
+createKeySelector("AimAssist", 10, Keys.AimAssist, function(newKey) Keys.AimAssist = newKey end)
+createKeySelector("TargetAim", 11, Keys.TargetAim, function(newKey) Keys.TargetAim = newKey end)
 
 mainFrame.Position = UDim2.new(0.5, -200, 1, 0)
 TS:Create(mainFrame, TweenInfo.new(0.5, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {Position = UDim2.new(0.5, -200, 0.5, -250)}):Play()
@@ -692,10 +608,11 @@ end)
 UIS.InputBegan:Connect(function(input)
     if isUnlocked and input.KeyCode == Keys.SilentAim and States.SilentAim then
         local target = getClosestTarget()
-        if target and target.Character and target.Character:FindFirstChild("Head") and List[game.PlaceId] then
+        if target and target.Character and target.Character:FindFirstChild("Head") then
             local head = target.Character.Head
             local predictedPos = head.Position + head.Parent.HumanoidRootPart.Velocity * Settings.Prediction
-            game.ReplicatedStorage[List[game.PlaceId][3]]:FireServer(List[game.PlaceId][2], predictedPos)
+            -- Note : La ligne suivante est désactivée car elle dépendait de la liste des jeux
+            -- game.ReplicatedStorage[List[game.PlaceId][3]]:FireServer(List[game.PlaceId][2], predictedPos)
         end
     end
 end)
