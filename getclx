@@ -139,7 +139,7 @@ titleLabel.BackgroundTransparency = 1
 titleLabel.Text = "CLX"
 titleLabel.TextColor3 = Color3.fromRGB(255, 20, 20)
 titleLabel.TextSize = 24
-titleLabel.Font = Enum.Font.Neon
+titleLabel.Font = Enum.Font.SourceSans
 titleLabel.Parent = mainFrame
 
 local aimAssistButton = Instance.new("TextButton")
