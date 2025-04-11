@@ -1,1 +1,546 @@
+local LP = game.Players.LocalPlayer
+local TS = game:GetService("TweenService")
+local UIS = game:GetService("UserInputService")
+local RS = game:GetService("RunService")
+local Camera = workspace.CurrentCamera
 
+local States = {
+    TriggerBot = false,
+    SilentAim = false,
+    AimAssist = false,
+    TargetAim = false
+}
+local Keys = {
+    TriggerBot = Enum.KeyCode.Q,
+    SilentAim = Enum.KeyCode.E,
+    AimAssist = Enum.KeyCode.R,
+    TargetAim = Enum.KeyCode.T
+}
+local Settings = {
+    FOVColor = Color3.fromRGB(255, 0, 0),
+    SilentAimFOV = 1,
+    AimAssistFOV = 1,
+    AimAssistSmoothness = 0.15,
+    AimAssistMaxDistance = 1000,
+    Prediction = 0.12
+}
+local circle = Drawing.new("Circle")
+circle.Thickness = 1
+circle.NumSides = 100
+circle.Radius = Settings.AimAssistFOV
+circle.Visible = false
+circle.Color = Settings.FOVColor
+circle.Filled = false
+
+local List = {
+    [16469595315] = {'Del Hood', 'UpdateMousePos', 'MainEvent'},
+    [17319408836] = {'OG Da Hood', 'UpdateMousePos', 'MainEvent'},
+    [14975320521] = {'Ar Hood', 'UpdateMousePos', 'MainEvent'},
+    [17200018150] = {'Hood Of AR', 'UpdateMousePos', 'MainEvent'},
+    [15644861772] = {'Flame Hood', 'UpdatQeMousePos', 'MainEvent'},
+    [17723797487] = {'Dee Hood', 'UpdateMousePosI', 'MainEvent'},
+    [17897702920] = {'Og Da Hood', 'UpdateMousePos', 'MainEvent'},
+    [17809101348] = {'New Hood', 'UpdateMousePos', 'MainEvent'},
+    [17344804827] = {'Yeno Hood', 'UpdateMousePos', 'MainEvent'},
+    [16435867341] = {'Mad Hood', 'UpdateMousePos', 'MainEvent'},
+    [14412601883] = {'Hood Bank', 'MOUSE', 'MAINEVENT'},
+    [14412436145] = {'Da Uphill', 'MOUSE', 'MAINEVENT'},
+    [14487637618] = {'Da Hood Bot Aim Trainer', 'MOUSE', 'MAINEVENT'},
+    [11143225577] = {'1v1 Hood Aim Trainer', 'UpdateMousePos', 'MainEvent'},
+    [14413712255] = {'Hood Aim', 'MOUSE', 'MAINEVENT'},
+    [12927359803] = {'Dah Aim Trainer', 'UpdateMousePos', 'MainEvent'},
+    [12867571492] = {'Katana Hood', 'UpdateMousePos', 'MainEvent'},
+    [11867820563] = {'Dae Hood', 'UpdateMousePos', 'MainEvent'},
+    [17109142105] = {'Da Battles', 'MoonUpdateMousePos', 'MainEvent'},
+    [15186202290] = {'Da Strike', 'MOUSE', 'MAINEVENT'},
+    [2788229376] = {'Da Hood', 'UpdateMousePosI', 'MainEvent'},
+    [16033173781] = {'Da Hood Macro', 'UpdateMousePosI', 'MainEvent'},
+    [7213786345] = {'Da Hood VC', 'UpdateMousePosI', 'MainEvent'},
+    [9825515356] = {'Hood Customs', 'MousePosUpdate', 'MainEvent'},
+    [17895632819] = {'Hood Spirit', 'UpdateMousePos', 'MainEvent'},
+    [5602055394] = {'Hood Modded', 'MousePos', 'Bullets'},
+    [7951883376] = {'Hood Modded VC', 'MousePos', 'Bullets'},
+    [9183932460] = {'Untitled Hood', 'UpdateMousePos', '.gg/untitledhood'},
+    [14412355918] = {'Da Downhill', 'MOUSE', 'MAINEVENT'}
+}
+
+local gui = Instance.new("ScreenGui")
+gui.Name = "clx_x_sajid"
+gui.Parent = LP:WaitForChild("PlayerGui")
+gui.ResetOnSpawn = false
+gui.IgnoreGuiInset = true
+
+local startupFrame = Instance.new("Frame")
+startupFrame.Size = UDim2.new(1, 0, 1, 0)
+startupFrame.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+startupFrame.BackgroundTransparency = 0.2
+startupFrame.Parent = gui
+
+local startupLabel = Instance.new("TextLabel")
+startupLabel.Size = UDim2.new(0, 600, 0, 100)
+startupLabel.Position = UDim2.new(0.5, -300, 0.5, -50)
+startupLabel.BackgroundTransparency = 1
+startupLabel.Text = "Silent Aim is not working (in dev)"
+startupLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+startupLabel.TextSize = 40
+startupLabel.Font = Enum.Font.FredokaOne
+startupLabel.TextStrokeTransparency = 0.8
+startupLabel.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
+startupLabel.Parent = startupFrame
+
+local function rainbowGradient()
+    local hue = 0
+    while true do
+        hue = (hue + 0.02) % 1
+        local color = Color3.fromHSV(hue, 1, 1)
+        startupLabel.TextColor3 = color
+        startupLabel.TextStrokeColor3 = color:Lerp(Color3.fromRGB(0, 0, 0), 0.5)
+        wait(0.05)
+    end
+end
+task.spawn(rainbowGradient)
+
+startupFrame.BackgroundTransparency = 1
+startupLabel.TextTransparency = 1
+TS:Create(startupFrame, TweenInfo.new(1, Enum.EasingStyle.Quart), {BackgroundTransparency = 0.2}):Play()
+TS:Create(startupLabel, TweenInfo.new(1, Enum.EasingStyle.Quart), {TextTransparency = 0}):Play()
+wait(3)
+TS:Create(startupFrame, TweenInfo.new(1, Enum.EasingStyle.Quart), {BackgroundTransparency = 1}):Play()
+TS:Create(startupLabel, TweenInfo.new(1, Enum.EasingStyle.Quart), {TextTransparency = 1}):Play()
+wait(1)
+startupFrame:Destroy()
+
+local mainFrame = Instance.new("Frame")
+mainFrame.Size = UDim2.new(0, 400, 0, 500)
+mainFrame.Position = UDim2.new(0.5, -200, 0.5, -250)
+mainFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+mainFrame.BorderSizePixel = 0
+mainFrame.ClipsDescendants = true
+mainFrame.Parent = gui
+
+local uiCorner = Instance.new("UICorner")
+uiCorner.CornerRadius = UDim.new(0, 12)
+uiCorner.Parent = mainFrame
+
+local uiGradient = Instance.new("UIGradient")
+uiGradient.Color = ColorSequence.new({
+    ColorSequenceKeypoint.new(0, Color3.fromRGB(35, 35, 35)),
+    ColorSequenceKeypoint.new(1, Color3.fromRGB(20, 20, 20))
+})
+uiGradient.Rotation = 45
+uiGradient.Parent = mainFrame
+
+local shadow = Instance.new("ImageLabel")
+shadow.Size = UDim2.new(1, 20, 1, 20)
+shadow.Position = UDim2.new(0, -10, 0, -10)
+shadow.BackgroundTransparency = 1
+shadow.Image = "rbxassetid://1316045217"
+shadow.ImageColor3 = Color3.fromRGB(0, 0, 0)
+shadow.ImageTransparency = 0.7
+shadow.ScaleType = Enum.ScaleType.Slice
+shadow.SliceCenter = Rect.new(10, 10, 118, 118)
+shadow.Parent = mainFrame
+shadow.ZIndex = -1
+
+local scrollingFrame = Instance.new("ScrollingFrame")
+scrollingFrame.Size = UDim2.new(1, -20, 1, -100)
+scrollingFrame.Position = UDim2.new(0, 10, 0, 90)
+scrollingFrame.BackgroundTransparency = 1
+scrollingFrame.BorderSizePixel = 0
+scrollingFrame.ScrollBarThickness = 6
+scrollingFrame.ScrollBarImageColor3 = Color3.fromRGB(255, 0, 0)
+scrollingFrame.CanvasSize = UDim2.new(0, 0, 0, 1200)
+scrollingFrame.Visible = true
+scrollingFrame.Parent = mainFrame
+
+local uiListLayout = Instance.new("UIListLayout")
+uiListLayout.Padding = UDim.new(0, 8)
+uiListLayout.SortOrder = Enum.SortOrder.LayoutOrder
+uiListLayout.Parent = scrollingFrame
+
+local uiPadding = Instance.new("UIPadding")
+uiPadding.PaddingTop = UDim.new(0, 10)
+uiPadding.PaddingLeft = UDim.new(0, 10)
+uiPadding.PaddingRight = UDim.new(0, 10)
+uiPadding.Parent = scrollingFrame
+
+local titleLabel = Instance.new("TextLabel")
+titleLabel.Size = UDim2.new(1, 0, 0, 60)
+titleLabel.Position = UDim2.new(0, 0, 0, 10)
+titleLabel.BackgroundTransparency = 1
+titleLabel.Text = "CLX"
+titleLabel.TextColor3 = Color3.fromRGB(255, 0, 0)
+titleLabel.TextSize = 40
+titleLabel.Font = Enum.Font.FredokaOne
+titleLabel.TextStrokeTransparency = 0.8
+titleLabel.TextStrokeColor3 = Color3.fromRGB(100, 0, 0)
+titleLabel.Parent = mainFrame
+titleLabel.TextXAlignment = Enum.TextXAlignment.Center
+
+local neonEffect = Instance.new("UIGradient")
+neonEffect.Color = ColorSequence.new({
+    ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 0, 0)),
+    ColorSequenceKeypoint.new(0.5, Color3.fromRGB(255, 100, 100)),
+    ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 0, 0))
+})
+neonEffect.Enabled = true
+neonEffect.Parent = titleLabel
+
+task.spawn(function()
+    while true do
+        local tweenInfo = TweenInfo.new(1.5, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true)
+        local tween = TS:Create(titleLabel, tweenInfo, {TextTransparency = 0.1, TextStrokeTransparency = 0.7})
+        tween:Play()
+        wait(3)
+    end
+end)
+
+local function createButton(name, layoutOrder, callback)
+    local buttonFrame = Instance.new("Frame")
+    buttonFrame.Size = UDim2.new(1, 0, 0, 40)
+    buttonFrame.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+    buttonFrame.BorderSizePixel = 0
+    buttonFrame.LayoutOrder = layoutOrder
+    buttonFrame.Parent = scrollingFrame
+
+    local buttonCorner = Instance.new("UICorner")
+    buttonCorner.CornerRadius = UDim.new(0, 8)
+    buttonCorner.Parent = buttonFrame
+
+    local button = Instance.new("TextButton")
+    button.Size = UDim2.new(1, 0, 1, 0)
+    button.BackgroundTransparency = 1
+    button.Text = name .. ": OFF"
+    button.TextColor3 = Color3.fromRGB(255, 255, 255)
+    button.TextSize = 16
+    button.Font = Enum.Font.GothamBold
+    button.Parent = buttonFrame
+
+    button.MouseEnter:Connect(function()
+        TS:Create(buttonFrame, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(255, 0, 0)}):Play()
+    end)
+    button.MouseLeave:Connect(function()
+        TS:Create(buttonFrame, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(40, 40, 40)}):Play()
+    end)
+
+    button.MouseButton1Click:Connect(function()
+        callback(button)
+    end)
+    return button
+end
+
+local function createKeySelector(name, layoutOrder, defaultKey, callback)
+    local frame = Instance.new("Frame")
+    frame.Size = UDim2.new(1, 0, 0, 40)
+    frame.BackgroundTransparency = 1
+    frame.LayoutOrder = layoutOrder
+    frame.Parent = scrollingFrame
+
+    local label = Instance.new("TextLabel")
+    label.Size = UDim2.new(0.5, 0, 1, 0)
+    label.BackgroundTransparency = 1
+    label.Text = name .. " Key: "
+    label.TextColor3 = Color3.fromRGB(255, 255, 255)
+    label.TextSize = 16
+    label.Font = Enum.Font.Gotham
+    label.TextXAlignment = Enum.TextXAlignment.Left
+    label.Parent = frame
+
+    local keyButtonFrame = Instance.new("Frame")
+    keyButtonFrame.Size = UDim2.new(0.5, 0, 1, 0)
+    keyButtonFrame.Position = UDim2.new(0.5, 0, 0, 0)
+    keyButtonFrame.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+    keyButtonFrame.Parent = frame
+
+    local keyButtonCorner = Instance.new("UICorner")
+    keyButtonCorner.CornerRadius = UDim.new(0, 8)
+    keyButtonCorner.Parent = keyButtonFrame
+
+    local keyButton = Instance.new("TextButton")
+    keyButton.Size = UDim2.new(1, 0, 1, 0)
+    keyButton.BackgroundTransparency = 1
+    keyButton.Text = tostring(defaultKey.Name)
+    keyButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+    keyButton.TextSize = 16
+    keyButton.Font = Enum.Font.Gotham
+    keyButton.Parent = keyButtonFrame
+
+    keyButton.MouseEnter:Connect(function()
+        TS:Create(keyButtonFrame, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(255, 0, 0)}):Play()
+    end)
+    keyButton.MouseLeave:Connect(function()
+        TS:Create(keyButtonFrame, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(40, 40, 40)}):Play()
+    end)
+
+    keyButton.MouseButton1Click:Connect(function()
+        keyButton.Text = "Press Key..."
+        local conn
+        conn = UIS.InputBegan:Connect(function(input)
+            if input.UserInputType == Enum.UserInputType.Keyboard then
+                callback(input.KeyCode)
+                keyButton.Text = tostring(input.KeyCode.Name)
+                conn:Disconnect()
+            end
+        end)
+    end)
+    return frame
+end
+
+local tbBtn = createButton("TriggerBot", 1, function(button)
+    States.TriggerBot = not States.TriggerBot
+    button.Text = "TriggerBot: " .. (States.TriggerBot and "ON" or "OFF")
+end)
+
+local saBtn = createButton("Silent Aim", 2, function(button)
+    States.SilentAim = not States.SilentAim
+    button.Text = "Silent Aim: " .. (States.SilentAim and "ON" or "OFF")
+end)
+
+local colorFrame = Instance.new("Frame")
+colorFrame.Size = UDim2.new(1, 0, 0, 40)
+colorFrame.BackgroundTransparency = 1
+colorFrame.LayoutOrder = 3
+colorFrame.Parent = scrollingFrame
+
+local colorLabel = Instance.new("TextLabel")
+colorLabel.Size = UDim2.new(0.5, 0, 1, 0)
+colorLabel.BackgroundTransparency = 1
+colorLabel.Text = "FOV Color: "
+colorLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+colorLabel.TextSize = 16
+colorLabel.Font = Enum.Font.Gotham
+colorLabel.TextXAlignment = Enum.TextXAlignment.Left
+colorLabel.Parent = colorFrame
+
+local colorButtonFrame = Instance.new("Frame")
+colorButtonFrame.Size = UDim2.new(0.5, 0, 1, 0)
+colorButtonFrame.Position = UDim2.new(0.5, 0, 0, 0)
+colorButtonFrame.BackgroundColor3 = Settings.FOVColor
+colorButtonFrame.Parent = colorFrame
+
+local colorButtonCorner = Instance.new("UICorner")
+colorButtonCorner.CornerRadius = UDim.new(0, 8)
+colorButtonCorner.Parent = colorButtonFrame
+
+local colorButton = Instance.new("TextButton")
+colorButton.Size = UDim2.new(1, 0, 1, 0)
+colorButton.BackgroundTransparency = 1
+colorButton.Text = ""
+colorButton.Parent = colorButtonFrame
+
+colorButton.MouseEnter:Connect(function()
+    TS:Create(colorButtonFrame, TweenInfo.new(0.2), {BackgroundColor3 = Settings.FOVColor:Lerp(Color3.fromRGB(255, 255, 255), 0.2)}):Play()
+end)
+colorButton.MouseLeave:Connect(function()
+    TS:Create(colorButtonFrame, TweenInfo.new(0.2), {BackgroundColor3 = Settings.FOVColor}):Play()
+end)
+
+colorButton.MouseButton1Click:Connect(function()
+    local r, g, b = math.random(0, 255), math.random(0, 255), math.random(0, 255)
+    Settings.FOVColor = Color3.fromRGB(r, g, b)
+    colorButtonFrame.BackgroundColor3 = Settings.FOVColor
+    circle.Color = Settings.FOVColor
+end)
+
+local aimAssistBtn = createButton("Aim Assist", 4, function(button)
+    States.AimAssist = not States.AimAssist
+    button.Text = "Aim Assist: " .. (States.AimAssist and "ON" or "OFF")
+    circle.Visible = States.AimAssist
+end)
+
+local taBtn = createButton("Target Aim", 5, function(button)
+    States.TargetAim = not States.TargetAim
+    button.Text = "Target Aim: " .. (States.TargetAim and "ON" or "OFF")
+end)
+
+local separator = Instance.new("Frame")
+separator.Size = UDim2.new(1, 0, 0, 2)
+separator.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
+separator.BorderSizePixel = 0
+separator.LayoutOrder = 6
+separator.Parent = scrollingFrame
+
+local gamesTitle = Instance.new("TextLabel")
+gamesTitle.Size = UDim2.new(1, 0, 0, 30)
+gamesTitle.BackgroundTransparency = 1
+gamesTitle.Text = "Compatible Games"
+gamesTitle.TextColor3 = Color3.fromRGB(255, 0, 0)
+gamesTitle.TextSize = 20
+gamesTitle.Font = Enum.Font.GothamBold
+gamesTitle.TextXAlignment = Enum.TextXAlignment.Left
+gamesTitle.LayoutOrder = 7
+gamesTitle.Parent = scrollingFrame
+
+local gameCount = 0
+for placeId, gameInfo in pairs(List) do
+    gameCount = gameCount + 1
+    local gameFrame = Instance.new("Frame")
+    gameFrame.Size = UDim2.new(1, 0, 0, 40)
+    gameFrame.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+    gameFrame.BorderSizePixel = 0
+    gameFrame.LayoutOrder = 7 + gameCount
+    gameFrame.Parent = scrollingFrame
+
+    local gameCorner = Instance.new("UICorner")
+    gameCorner.CornerRadius = UDim.new(0, 8)
+    gameCorner.Parent = gameFrame
+
+    local gameLabel = Instance.new("TextLabel")
+    gameLabel.Size = UDim2.new(1, 0, 1, 0)
+    gameLabel.BackgroundTransparency = 1
+    gameLabel.Text = gameInfo[1] .. (game.PlaceId == placeId and " (Current)" or "")
+    gameLabel.TextColor3 = game.PlaceId == placeId and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 255, 255)
+    gameLabel.TextSize = 16
+    gameLabel.Font = Enum.Font.Gotham
+    gameLabel.TextXAlignment = Enum.TextXAlignment.Left
+    gameLabel.Parent = gameFrame
+
+    local teleportButton = Instance.new("TextButton")
+    teleportButton.Size = UDim2.new(0, 80, 1, 0)
+    teleportButton.Position = UDim2.new(1, -90, 0, 0)
+    teleportButton.BackgroundTransparency = 1
+    teleportButton.Text = "Teleport"
+    teleportButton.TextColor3 = Color3.fromRGB(255, 0, 0)
+    teleportButton.TextSize = 14
+    teleportButton.Font = Enum.Font.GothamBold
+    teleportButton.Parent = gameFrame
+    teleportButton.Visible = game.PlaceId ~= placeId
+
+    teleportButton.MouseEnter:Connect(function()
+        TS:Create(gameFrame, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(255, 0, 0)}):Play()
+    end)
+    teleportButton.MouseLeave:Connect(function()
+        TS:Create(gameFrame, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(40, 40, 40)}):Play()
+    end)
+
+    teleportButton.MouseButton1Click:Connect(function()
+        game:GetService("TeleportService"):Teleport(placeId, LP)
+    end)
+end
+
+local separator2 = Instance.new("Frame")
+separator2.Size = UDim2.new(1, 0, 0, 2)
+separator2.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
+separator2.BorderSizePixel = 0
+separator2.LayoutOrder = 7 + gameCount + 1
+separator2.Parent = scrollingFrame
+
+createKeySelector("TriggerBot", 7 + gameCount + 2, Keys.TriggerBot, function(newKey) Keys.TriggerBot = newKey end)
+createKeySelector("SilentAim", 7 + gameCount + 3, Keys.SilentAim, function(newKey) Keys.SilentAim = newKey end)
+createKeySelector("AimAssist", 7 + gameCount + 4, Keys.AimAssist, function(newKey) Keys.AimAssist = newKey end)
+createKeySelector("TargetAim", 7 + gameCount + 5, Keys.TargetAim, function(newKey) Keys.TargetAim = newKey end)
+
+mainFrame.Position = UDim2.new(0.5, -200, 1, 0)
+TS:Create(mainFrame, TweenInfo.new(0.5, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {Position = UDim2.new(0.5, -200, 0.5, -250)}):Play()
+
+local dragging, dragInput, dragStart, startPos
+mainFrame.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        dragging = true
+        dragStart = input.Position
+        startPos = mainFrame.Position
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then
+                dragging = false
+            end
+        end)
+    end
+end)
+
+mainFrame.InputChanged:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseMovement then
+        dragInput = input
+    end
+end)
+
+UIS.InputChanged:Connect(function(input)
+    if input == dragInput and dragging then
+        local delta = input.Position - dragStart
+        mainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+    end
+end)
+
+local lockedTarget = nil
+local isTargeting = false
+
+local function getClosestTarget()
+    local closest = nil
+    local closestDist = Settings.SilentAimFOV
+    local mousePos = UIS:GetMouseLocation()
+    for _, player in pairs(game.Players:GetPlayers()) do
+        if player ~= LP and player.Character and player.Character:FindFirstChild("Head") then
+            local head = player.Character.Head
+            local screenPos, onScreen = Camera:WorldToViewportPoint(head.Position)
+            if onScreen then
+                local distance = (Vector2.new(screenPos.X, screenPos.Y) - mousePos).Magnitude
+                local rayOrigin = Camera.CFrame.Position
+                local rayDirection = (head.Position - rayOrigin).Unit * Settings.AimAssistMaxDistance
+                local raycastParams = RaycastParams.new()
+                raycastParams.FilterDescendantsInstances = {LP.Character}
+                raycastParams.FilterType = Enum.RaycastFilterType.Blacklist
+                local result = workspace:Raycast(rayOrigin, rayDirection, raycastParams)
+                if distance < closestDist and (not result or result.Instance:IsDescendantOf(player.Character)) then
+                    closestDist = distance
+                    closest = player
+                end
+            end
+        end
+    end
+    return closest
+end
+
+RS.RenderStepped:Connect(function()
+    circle.Position = UIS:GetMouseLocation()
+    if States.AimAssist and isTargeting and lockedTarget and lockedTarget.Character and lockedTarget.Character:FindFirstChild("Head") then
+        local head = lockedTarget.Character.Head
+        local predictedPos = head.Position + head.Parent.HumanoidRootPart.Velocity * Settings.Prediction
+        local screenPos, onScreen = Camera:WorldToViewportPoint(predictedPos)
+        local rayOrigin = Camera.CFrame.Position
+        local rayDirection = (predictedPos - rayOrigin).Unit * Settings.AimAssistMaxDistance
+        local raycastParams = RaycastParams.new()
+        raycastParams.FilterDescendantsInstances = {LP.Character}
+        raycastParams.FilterType = Enum.RaycastFilterType.Blacklist
+        local result = workspace:Raycast(rayOrigin, rayDirection, raycastParams)
+        if onScreen and (not result or result.Instance:IsDescendantOf(lockedTarget.Character)) then
+            local mousePos = UIS:GetMouseLocation()
+            local targetPos = Vector2.new(screenPos.X, screenPos.Y)
+            local distance = (targetPos - mousePos).Magnitude
+            if distance <= Settings.AimAssistFOV then
+                local currentCFrame = Camera.CFrame
+                local newCFrame = CFrame.new(currentCFrame.Position, predictedPos)
+                Camera.CFrame = currentCFrame:Lerp(newCFrame, Settings.AimAssistSmoothness)
+            else
+                lockedTarget = nil
+            end
+        else
+            lockedTarget = nil
+        end
+    end
+end)
+
+UIS.InputBegan:Connect(function(input)
+    if input.KeyCode == Keys.TargetAim and States.TargetAim then
+        isTargeting = true
+        if not lockedTarget then
+            lockedTarget = getClosestTarget()
+        end
+    end
+end)
+
+UIS.InputEnded:Connect(function(input)
+    if input.KeyCode == Keys.TargetAim then
+        isTargeting = false
+        lockedTarget = nil
+    end
+end)
+
+UIS.InputBegan:Connect(function(input)
+    if input.KeyCode == Keys.SilentAim and States.SilentAim then
+        local target = getClosestTarget()
+        if target and target.Character and target.Character:FindFirstChild("Head") and List[game.PlaceId] then
+            local head = target.Character.Head
+            local predictedPos = head.Position + head.Parent.HumanoidRootPart.Velocity * Settings.Prediction
+            game.ReplicatedStorage[List[game.PlaceId][3]]:FireServer(List[game.PlaceId][2], predictedPos)
+        end
+    end
+end)
