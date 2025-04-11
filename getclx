@@ -19,12 +19,14 @@ local Keys = {
 }
 local Settings = {
     FOVColor = Color3.fromRGB(255, 0, 0),
-    SilentAimFOV = 1,
-    AimAssistFOV = 1,
+    SilentAimFOV = 100,
+    AimAssistFOV = 100,
     AimAssistSmoothness = 0.15,
     AimAssistMaxDistance = 1000,
     Prediction = 0.12
 }
+
+-- Drawing circle setup
 local circle = Drawing.new("Circle")
 circle.Thickness = 1
 circle.NumSides = 100
@@ -33,18 +35,19 @@ circle.Visible = false
 circle.Color = Settings.FOVColor
 circle.Filled = false
 
+-- Main GUI setup
 local gui = Instance.new("ScreenGui")
 gui.Name = "clx_x_sajid"
 gui.Parent = LP:WaitForChild("PlayerGui")
 gui.ResetOnSpawn = false
 gui.IgnoreGuiInset = true
 
--- Effet de flou pour le GUI principal
+-- Blur effect
 local blurEffect = Instance.new("BlurEffect")
 blurEffect.Size = 24
 blurEffect.Parent = Lighting
 
--- Cadenas sur le GUI principal
+-- Lock frame
 local lockFrame = Instance.new("Frame")
 lockFrame.Size = UDim2.new(0, 100, 0, 100)
 lockFrame.Position = UDim2.new(0.5, -50, 0.5, -50)
@@ -61,7 +64,7 @@ lockImage.ImageRectSize = Vector2.new(36, 36)
 lockImage.ImageColor3 = Color3.fromRGB(255, 0, 0)
 lockImage.Parent = lockFrame
 
--- GUI pour entrer la clé
+-- Key GUI setup
 local keyGui = Instance.new("ScreenGui")
 keyGui.Name = "KeyGui"
 keyGui.Parent = LP:WaitForChild("PlayerGui")
@@ -116,15 +119,15 @@ submitCorner.CornerRadius = UDim.new(0, 8)
 submitCorner.Parent = submitButton
 
 local statusLabel = Instance.new("TextLabel")
-statusLabel.Size = UDim2.new(0, 50, 0, 50)
-statusLabel.Position = UDim2.new(0.5, -25, 0.8, 0)
+statusLabel.Size = UDim2.new(1, 0, 0, 30)
+statusLabel.Position = UDim2.new(0, 0, 0.8, 0)
 statusLabel.BackgroundTransparency = 1
 statusLabel.Text = ""
 statusLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-statusLabel.TextSize = 40
+statusLabel.TextSize = 20
 statusLabel.Parent = keyFrame
 
--- Startup Frame
+-- Startup frame
 local startupFrame = Instance.new("Frame")
 startupFrame.Size = UDim2.new(1, 0, 1, 0)
 startupFrame.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
@@ -135,7 +138,7 @@ local startupLabel = Instance.new("TextLabel")
 startupLabel.Size = UDim2.new(0, 600, 0, 100)
 startupLabel.Position = UDim2.new(0.5, -300, 0.5, -50)
 startupLabel.BackgroundTransparency = 1
-startupLabel.Text = "Silent Aim is not working (in dev)"
+startupLabel.Text = "CLX Loading..."
 startupLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
 startupLabel.TextSize = 40
 startupLabel.Font = Enum.Font.FredokaOne
@@ -145,16 +148,16 @@ startupLabel.Parent = startupFrame
 
 local function rainbowGradient()
     local hue = 0
-    while true do
+    while wait(0.05) do
         hue = (hue + 0.02) % 1
         local color = Color3.fromHSV(hue, 1, 1)
         startupLabel.TextColor3 = color
         startupLabel.TextStrokeColor3 = color:Lerp(Color3.fromRGB(0, 0, 0), 0.5)
-        wait(0.05)
     end
 end
 task.spawn(rainbowGradient)
 
+-- Startup animation
 startupFrame.BackgroundTransparency = 1
 startupLabel.TextTransparency = 1
 TS:Create(startupFrame, TweenInfo.new(1, Enum.EasingStyle.Quart), {BackgroundTransparency = 0.2}):Play()
@@ -165,12 +168,12 @@ TS:Create(startupLabel, TweenInfo.new(1, Enum.EasingStyle.Quart), {TextTranspare
 wait(1)
 startupFrame:Destroy()
 
--- Main Frame (initially locked)
+-- Main frame setup
 local mainFrame = Instance.new("Frame")
 mainFrame.Size = UDim2.new(0, 400, 0, 500)
 mainFrame.Position = UDim2.new(0.5, -200, 0.5, -250)
 mainFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
-mainFrame.BorderSizePixel = 0
+mainFrame.BorderSize voting rightsPixel = 0
 mainFrame.ClipsDescendants = true
 mainFrame.Parent = gui
 mainFrame.Active = false
@@ -200,6 +203,7 @@ shadow.SliceCenter = Rect.new(10, 10, 118, 118)
 shadow.Parent = mainFrame
 shadow.ZIndex = -1
 
+-- Scrolling frame setup
 local scrollingFrame = Instance.new("ScrollingFrame")
 scrollingFrame.Size = UDim2.new(1, -20, 1, -100)
 scrollingFrame.Position = UDim2.new(0, 10, 0, 90)
@@ -207,7 +211,9 @@ scrollingFrame.BackgroundTransparency = 1
 scrollingFrame.BorderSizePixel = 0
 scrollingFrame.ScrollBarThickness = 6
 scrollingFrame.ScrollBarImageColor3 = Color3.fromRGB(255, 0, 0)
-scrollingFrame.CanvasSize = UDim2.new(0, 0, 0, 400) -- Réduit car moins de contenu
+scrollingFrame.CanvasSize = UDim2.new(0, 0, 2, 0) -- Increased canvas size
+scrollingFrame.ScrollingDirection = Enum.ScrollingDirection.Y
+scrollingFrame.VerticalScrollBarInset = Enum.ScrollBarInset.ScrollBar
 scrollingFrame.Visible = true
 scrollingFrame.Parent = mainFrame
 
@@ -245,15 +251,14 @@ neonEffect.Enabled = true
 neonEffect.Parent = titleLabel
 
 task.spawn(function()
-    while true do
+    while wait(3) do
         local tweenInfo = TweenInfo.new(1.5, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true)
         local tween = TS:Create(titleLabel, tweenInfo, {TextTransparency = 0.1, TextStrokeTransparency = 0.7})
         tween:Play()
-        wait(3)
     end
 end)
 
--- Logique de validation de la clé
+-- Key validation logic
 local correctKey = "clx123"
 local isUnlocked = false
 
@@ -262,13 +267,12 @@ submitButton.MouseButton1Click:Connect(function()
     if enteredKey == correctKey then
         statusLabel.Text = "✅"
         statusLabel.TextColor3 = Color3.fromRGB(0, 255, 0)
-        TS:Create(statusLabel, TweenInfo.new(0.5, Enum.EasingStyle.Bounce), {TextTransparency = 0, Position = UDim2.new(0.5, -25, 0.7, 0)}):Play()
+        TS:Create(statusLabel, TweenInfo.new(0.5, Enum.EasingStyle.Bounce), {TextTransparency = 0}):Play()
         wait(1)
         TS:Create(keyFrame, TweenInfo.new(0.5, Enum.EasingStyle.Quart), {Position = UDim2.new(0.5, -150, 1, 0)}):Play()
         wait(0.5)
         keyGui:Destroy()
         TS:Create(lockImage, TweenInfo.new(0.5, Enum.EasingStyle.Quad), {Rotation = 360, ImageTransparency = 1}):Play()
-        TS:Create(lockFrame, TweenInfo.new(0.5, Enum.EasingStyle.Quad), {BackgroundTransparency = 1}):Play()
         wait(0.5)
         lockFrame:Destroy()
         blurEffect:Destroy()
@@ -288,7 +292,7 @@ end)
 
 local function createButton(name, layoutOrder, callback)
     local buttonFrame = Instance.new("Frame")
-    buttonFrame.Size = UDim2.new(1, 0, 0, 40)
+    buttonFrame.Size = UDim2.new(1, -20, 0, 40)
     buttonFrame.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
     buttonFrame.BorderSizePixel = 0
     buttonFrame.LayoutOrder = layoutOrder
@@ -328,7 +332,7 @@ end
 
 local function createKeySelector(name, layoutOrder, defaultKey, callback)
     local frame = Instance.new("Frame")
-    frame.Size = UDim2.new(1, 0, 0, 40)
+    frame.Size = UDim2.new(1, -20, 0, 40)
     frame.BackgroundTransparency = 1
     frame.LayoutOrder = layoutOrder
     frame.Parent = scrollingFrame
@@ -344,14 +348,15 @@ local function createKeySelector(name, layoutOrder, defaultKey, callback)
     label.Parent = frame
 
     local keyBox = Instance.new("TextBox")
-    keyBox.Size = UDim2.new(0.3, 0, 1, 0)
-    keyBox.Position = UDim2.new(0.4, 0, 0, 0)
+    keyBox.Size = UDim2.new(0.3, 0, 0.8, 0)
+    keyBox.Position = UDim2.new(0.4, 0, 0.1, 0)
     keyBox.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
     keyBox.Text = tostring(defaultKey.Name)
     keyBox.TextColor3 = Color3.fromRGB(255, 255, 255)
     keyBox.TextSize = 16
     keyBox.Font = Enum.Font.Gotham
     keyBox.TextEditable = false
+    keyBox.ClearTextOnFocus = false
     keyBox.Parent = frame
 
     local keyBoxCorner = Instance.new("UICorner")
@@ -359,8 +364,8 @@ local function createKeySelector(name, layoutOrder, defaultKey, callback)
     keyBoxCorner.Parent = keyBox
 
     local keyButton = Instance.new("TextButton")
-    keyButton.Size = UDim2.new(0.2, 0, 1, 0)
-    keyButton.Position = UDim2.new(0.75, 0, 0, 0)
+    keyButton.Size = UDim2.new(0.2, 0, 0.8, 0)
+    keyButton.Position = UDim2.new(0.75, 0, 0.1, 0)
     keyButton.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
     keyButton.Text = "Change"
     keyButton.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -383,15 +388,21 @@ local function createKeySelector(name, layoutOrder, defaultKey, callback)
         end
     end)
 
+    local connection
     keyButton.MouseButton1Click:Connect(function()
         if isUnlocked then
             keyBox.Text = "Press a key..."
-            local conn
-            conn = UIS.InputBegan:Connect(function(input)
+            if connection then
+                connection:Disconnect()
+            end
+            connection = UIS.InputBegan:Connect(function(input)
                 if input.UserInputType == Enum.UserInputType.Keyboard then
-                    callback(input.KeyCode)
-                    keyBox.Text = tostring(input.KeyCode.Name)
-                    conn:Disconnect()
+                    local newKey = input.KeyCode
+                    if newKey ~= Enum.KeyCode.Unknown then
+                        callback(newKey)
+                        keyBox.Text = tostring(newKey.Name)
+                        connection:Disconnect()
+                    end
                 end
             end)
         end
@@ -399,7 +410,7 @@ local function createKeySelector(name, layoutOrder, defaultKey, callback)
     return frame
 end
 
--- Boutons principaux
+-- Create buttons
 local tbBtn = createButton("TriggerBot", 1, function(button)
     States.TriggerBot = not States.TriggerBot
     button.Text = "TriggerBot: " .. (States.TriggerBot and "ON" or "OFF")
@@ -411,7 +422,7 @@ local saBtn = createButton("Silent Aim", 2, function(button)
 end)
 
 local colorFrame = Instance.new("Frame")
-colorFrame.Size = UDim2.new(1, 0, 0, 40)
+colorFrame.Size = UDim2.new(1, -20, 0, 40)
 colorFrame.BackgroundTransparency = 1
 colorFrame.LayoutOrder = 3
 colorFrame.Parent = scrollingFrame
@@ -473,17 +484,17 @@ local taBtn = createButton("Target Aim", 5, function(button)
     button.Text = "Target Aim: " .. (States.TargetAim and "ON" or "OFF")
 end)
 
--- Séparateur
+-- Separator
 local separator = Instance.new("Frame")
-separator.Size = UDim2.new(1, 0, 0, 2)
+separator.Size = UDim2.new(1, -20, 0, 2)
 separator.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
 separator.BorderSizePixel = 0
 separator.LayoutOrder = 6
 separator.Parent = scrollingFrame
 
--- Titre pour la section des touches
+-- Keys section title
 local keysTitle = Instance.new("TextLabel")
-keysTitle.Size = UDim2.new(1, 0, 0, 30)
+keysTitle.Size = UDim2.new(1, -20, 0, 30)
 keysTitle.BackgroundTransparency = 1
 keysTitle.Text = "Keybinds"
 keysTitle.TextColor3 = Color3.fromRGB(255, 0, 0)
@@ -493,15 +504,17 @@ keysTitle.TextXAlignment = Enum.TextXAlignment.Left
 keysTitle.LayoutOrder = 7
 keysTitle.Parent = scrollingFrame
 
--- Sélecteurs de touches
+-- Create key selectors
 createKeySelector("TriggerBot", 8, Keys.TriggerBot, function(newKey) Keys.TriggerBot = newKey end)
 createKeySelector("SilentAim", 9, Keys.SilentAim, function(newKey) Keys.SilentAim = newKey end)
 createKeySelector("AimAssist", 10, Keys.AimAssist, function(newKey) Keys.AimAssist = newKey end)
 createKeySelector("TargetAim", 11, Keys.TargetAim, function(newKey) Keys.TargetAim = newKey end)
 
+-- Frame animation
 mainFrame.Position = UDim2.new(0.5, -200, 1, 0)
 TS:Create(mainFrame, TweenInfo.new(0.5, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {Position = UDim2.new(0.5, -200, 0.5, -250)}):Play()
 
+-- Dragging functionality
 local dragging, dragInput, dragStart, startPos
 mainFrame.InputBegan:Connect(function(input)
     if isUnlocked and input.UserInputType == Enum.UserInputType.MouseButton1 then
@@ -529,6 +542,7 @@ UIS.InputChanged:Connect(function(input)
     end
 end)
 
+-- Aiming logic
 local lockedTarget = nil
 local isTargeting = false
 
@@ -611,8 +625,14 @@ UIS.InputBegan:Connect(function(input)
         if target and target.Character and target.Character:FindFirstChild("Head") then
             local head = target.Character.Head
             local predictedPos = head.Position + head.Parent.HumanoidRootPart.Velocity * Settings.Prediction
-            -- Note : La ligne suivante est désactivée car elle dépendait de la liste des jeux
-            -- game.ReplicatedStorage[List[game.PlaceId][3]]:FireServer(List[game.PlaceId][2], predictedPos)
+            -- Silent aim functionality would go here
         end
     end
 end)
+
+-- Update scrolling frame size
+local function updateCanvasSize()
+    scrollingFrame.CanvasSize = UDim2.new(0, 0, 0, uiListLayout.AbsoluteContentSize.Y + 20)
+end
+uiListLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(updateCanvasSize)
+updateCanvasSize()
