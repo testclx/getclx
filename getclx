@@ -3,6 +3,7 @@ local TS = game:GetService("TweenService")
 local UIS = game:GetService("UserInputService")
 local RS = game:GetService("RunService")
 local Camera = workspace.CurrentCamera
+local Lighting = game:GetService("Lighting")
 
 local States = {
     TriggerBot = false,
@@ -70,6 +71,92 @@ gui.Parent = LP:WaitForChild("PlayerGui")
 gui.ResetOnSpawn = false
 gui.IgnoreGuiInset = true
 
+-- Effet de flou pour le GUI principal
+local blurEffect = Instance.new("BlurEffect")
+blurEffect.Size = 24
+blurEffect.Parent = Lighting
+
+-- Cadenas sur le GUI principal
+local lockFrame = Instance.new("Frame")
+lockFrame.Size = UDim2.new(0, 100, 0, 100)
+lockFrame.Position = UDim2.new(0.5, -50, 0.5, -50)
+lockFrame.BackgroundTransparency = 1
+lockFrame.Parent = gui
+lockFrame.Visible = true
+
+local lockImage = Instance.new("ImageLabel")
+lockImage.Size = UDim2.new(1, 0, 1, 0)
+lockImage.BackgroundTransparency = 1
+lockImage.Image = "rbxassetid://3926305904" -- Image d'un cadenas
+lockImage.ImageRectOffset = Vector2.new(524, 204)
+lockImage.ImageRectSize = Vector2.new(36, 36)
+lockImage.ImageColor3 = Color3.fromRGB(255, 0, 0)
+lockImage.Parent = lockFrame
+
+-- GUI pour entrer la clé
+local keyGui = Instance.new("ScreenGui")
+keyGui.Name = "KeyGui"
+keyGui.Parent = LP:WaitForChild("PlayerGui")
+keyGui.ResetOnSpawn = false
+
+local keyFrame = Instance.new("Frame")
+keyFrame.Size = UDim2.new(0, 300, 0, 200)
+keyFrame.Position = UDim2.new(0.5, -150, 0.5, -100)
+keyFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+keyFrame.Parent = keyGui
+
+local keyCorner = Instance.new("UICorner")
+keyCorner.CornerRadius = UDim.new(0, 12)
+keyCorner.Parent = keyFrame
+
+local keyTitle = Instance.new("TextLabel")
+keyTitle.Size = UDim2.new(1, 0, 0, 50)
+keyTitle.BackgroundTransparency = 1
+keyTitle.Text = "Please enter your key:"
+keyTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
+keyTitle.TextSize = 20
+keyTitle.Font = Enum.Font.GothamBold
+keyTitle.Parent = keyFrame
+
+local keyInput = Instance.new("TextBox")
+keyInput.Size = UDim2.new(0.8, 0, 0, 40)
+keyInput.Position = UDim2.new(0.1, 0, 0.3, 0)
+keyInput.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+keyInput.Text = ""
+keyInput.PlaceholderText = "Enter key here"
+keyInput.TextColor3 = Color3.fromRGB(255, 255, 255)
+keyInput.TextSize = 16
+keyInput.Font = Enum.Font.Gotham
+keyInput.Parent = keyFrame
+
+local keyInputCorner = Instance.new("UICorner")
+keyInputCorner.CornerRadius = UDim.new(0, 8)
+keyInputCorner.Parent = keyInput
+
+local submitButton = Instance.new("TextButton")
+submitButton.Size = UDim2.new(0.4, 0, 0, 40)
+submitButton.Position = UDim2.new(0.3, 0, 0.6, 0)
+submitButton.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
+submitButton.Text = "Submit"
+submitButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+submitButton.TextSize = 16
+submitButton.Font = Enum.Font.GothamBold
+submitButton.Parent = keyFrame
+
+local submitCorner = Instance.new("UICorner")
+submitCorner.CornerRadius = UDim.new(0, 8)
+submitCorner.Parent = submitButton
+
+local statusLabel = Instance.new("TextLabel")
+statusLabel.Size = UDim2.new(0, 50, 0, 50)
+statusLabel.Position = UDim2.new(0.5, -25, 0.8, 0)
+statusLabel.BackgroundTransparency = 1
+statusLabel.Text = ""
+statusLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+statusLabel.TextSize = 40
+statusLabel.Parent = keyFrame
+
+-- Startup Frame
 local startupFrame = Instance.new("Frame")
 startupFrame.Size = UDim2.new(1, 0, 1, 0)
 startupFrame.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
@@ -110,6 +197,7 @@ TS:Create(startupLabel, TweenInfo.new(1, Enum.EasingStyle.Quart), {TextTranspare
 wait(1)
 startupFrame:Destroy()
 
+-- Main Frame (initially locked)
 local mainFrame = Instance.new("Frame")
 mainFrame.Size = UDim2.new(0, 400, 0, 500)
 mainFrame.Position = UDim2.new(0.5, -200, 0.5, -250)
@@ -117,6 +205,8 @@ mainFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
 mainFrame.BorderSizePixel = 0
 mainFrame.ClipsDescendants = true
 mainFrame.Parent = gui
+mainFrame.Active = false -- Désactivé au départ
+mainFrame.Selectable = false
 
 local uiCorner = Instance.new("UICorner")
 uiCorner.CornerRadius = UDim.new(0, 12)
@@ -195,6 +285,45 @@ task.spawn(function()
     end
 end)
 
+-- Logique de validation de la clé
+local correctKey = "clx123"
+local isUnlocked = false
+
+submitButton.MouseButton1Click:Connect(function()
+    local enteredKey = keyInput.Text
+    if enteredKey == correctKey then
+        -- Animation de succès
+        statusLabel.Text = "✅"
+        statusLabel.TextColor3 = Color3.fromRGB(0, 255, 0)
+        TS:Create(statusLabel, TweenInfo.new(0.5, Enum.EasingStyle.Bounce), {TextTransparency = 0, Position = UDim2.new(0.5, -25, 0.7, 0)}):Play()
+        wait(1)
+        -- Disparition du GUI de la clé
+        TS:Create(keyFrame, TweenInfo.new(0.5, Enum.EasingStyle.Quart), {Position = UDim2.new(0.5, -150, 1, 0)}):Play()
+        wait(0.5)
+        keyGui:Destroy()
+        -- Animation de déverrouillage
+        TS:Create(lockImage, TweenInfo.new(0.5, Enum.EasingStyle.Quad), {Rotation = 360, ImageTransparency = 1}):Play()
+        TS:Create(lockFrame, TweenInfo.new(0.5, Enum.EasingStyle.Quad), {BackgroundTransparency = 1}):Play()
+        wait(0.5)
+        lockFrame:Destroy()
+        -- Suppression du flou et activation du GUI principal
+        blurEffect:Destroy()
+        mainFrame.Active = true
+        mainFrame.Selectable = true
+        isUnlocked = true
+    else
+        -- Animation d'échec
+        statusLabel.Text = "❌"
+        statusLabel.TextColor3 = Color3.fromRGB(255, 0, 0)
+        TS:Create(statusLabel, TweenInfo.new(0.3, Enum.EasingStyle.Bounce), {TextTransparency = 0}):Play()
+        TS:Create(keyFrame, TweenInfo.new(0.1, Enum.EasingStyle.Linear, Enum.EasingDirection.InOut, 2, true), {Position = UDim2.new(0.5, -145, 0.5, -100)}):Play()
+        wait(0.5)
+        TS:Create(statusLabel, TweenInfo.new(0.3, Enum.EasingStyle.Quad), {TextTransparency = 1}):Play()
+        keyInput.Text = ""
+    end
+end)
+
+-- Le reste du code reste inchangé
 local function createButton(name, layoutOrder, callback)
     local buttonFrame = Instance.new("Frame")
     buttonFrame.Size = UDim2.new(1, 0, 0, 40)
@@ -217,14 +346,20 @@ local function createButton(name, layoutOrder, callback)
     button.Parent = buttonFrame
 
     button.MouseEnter:Connect(function()
-        TS:Create(buttonFrame, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(255, 0, 0)}):Play()
+        if isUnlocked then
+            TS:Create(buttonFrame, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(255, 0, 0)}):Play()
+        end
     end)
     button.MouseLeave:Connect(function()
-        TS:Create(buttonFrame, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(40, 40, 40)}):Play()
+        if isUnlocked then
+            TS:Create(buttonFrame, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(40, 40, 40)}):Play()
+        end
     end)
 
     button.MouseButton1Click:Connect(function()
-        callback(button)
+        if isUnlocked then
+            callback(button)
+        end
     end)
     return button
 end
@@ -266,22 +401,28 @@ local function createKeySelector(name, layoutOrder, defaultKey, callback)
     keyButton.Parent = keyButtonFrame
 
     keyButton.MouseEnter:Connect(function()
-        TS:Create(keyButtonFrame, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(255, 0, 0)}):Play()
+        if isUnlocked then
+            TS:Create(keyButtonFrame, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(255, 0, 0)}):Play()
+        end
     end)
     keyButton.MouseLeave:Connect(function()
-        TS:Create(keyButtonFrame, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(40, 40, 40)}):Play()
+        if isUnlocked then
+            TS:Create(keyButtonFrame, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(40, 40, 40)}):Play()
+        end
     end)
 
     keyButton.MouseButton1Click:Connect(function()
-        keyButton.Text = "Press Key..."
-        local conn
-        conn = UIS.InputBegan:Connect(function(input)
-            if input.UserInputType == Enum.UserInputType.Keyboard then
-                callback(input.KeyCode)
-                keyButton.Text = tostring(input.KeyCode.Name)
-                conn:Disconnect()
-            end
-        end)
+        if isUnlocked then
+            keyButton.Text = "Press Key..."
+            local conn
+            conn = UIS.InputBegan:Connect(function(input)
+                if input.UserInputType == Enum.UserInputType.Keyboard then
+                    callback(input.KeyCode)
+                    keyButton.Text = tostring(input.KeyCode.Name)
+                    conn:Disconnect()
+                end
+            end)
+        end
     end)
     return frame
 end
@@ -329,17 +470,23 @@ colorButton.Text = ""
 colorButton.Parent = colorButtonFrame
 
 colorButton.MouseEnter:Connect(function()
-    TS:Create(colorButtonFrame, TweenInfo.new(0.2), {BackgroundColor3 = Settings.FOVColor:Lerp(Color3.fromRGB(255, 255, 255), 0.2)}):Play()
+    if isUnlocked then
+        TS:Create(colorButtonFrame, TweenInfo.new(0.2), {BackgroundColor3 = Settings.FOVColor:Lerp(Color3.fromRGB(255, 255, 255), 0.2)}):Play()
+    end
 end)
 colorButton.MouseLeave:Connect(function()
-    TS:Create(colorButtonFrame, TweenInfo.new(0.2), {BackgroundColor3 = Settings.FOVColor}):Play()
+    if isUnlocked then
+        TS:Create(colorButtonFrame, TweenInfo.new(0.2), {BackgroundColor3 = Settings.FOVColor}):Play()
+    end
 end)
 
 colorButton.MouseButton1Click:Connect(function()
-    local r, g, b = math.random(0, 255), math.random(0, 255), math.random(0, 255)
-    Settings.FOVColor = Color3.fromRGB(r, g, b)
-    colorButtonFrame.BackgroundColor3 = Settings.FOVColor
-    circle.Color = Settings.FOVColor
+    if isUnlocked then
+        local r, g, b = math.random(0, 255), math.random(0, 255), math.random(0, 255)
+        Settings.FOVColor = Color3.fromRGB(r, g, b)
+        colorButtonFrame.BackgroundColor3 = Settings.FOVColor
+        circle.Color = Settings.FOVColor
+    end
 end)
 
 local aimAssistBtn = createButton("Aim Assist", 4, function(button)
@@ -407,14 +554,20 @@ for placeId, gameInfo in pairs(List) do
     teleportButton.Visible = game.PlaceId ~= placeId
 
     teleportButton.MouseEnter:Connect(function()
-        TS:Create(gameFrame, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(255, 0, 0)}):Play()
+        if isUnlocked then
+            TS:Create(gameFrame, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(255, 0, 0)}):Play()
+        end
     end)
     teleportButton.MouseLeave:Connect(function()
-        TS:Create(gameFrame, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(40, 40, 40)}):Play()
+        if isUnlocked then
+            TS:Create(gameFrame, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(40, 40, 40)}):Play()
+        end
     end)
 
     teleportButton.MouseButton1Click:Connect(function()
-        game:GetService("TeleportService"):Teleport(placeId, LP)
+        if isUnlocked then
+            game:GetService("TeleportService"):Teleport(placeId, LP)
+        end
     end)
 end
 
@@ -435,7 +588,7 @@ TS:Create(mainFrame, TweenInfo.new(0.5, Enum.EasingStyle.Quart, Enum.EasingDirec
 
 local dragging, dragInput, dragStart, startPos
 mainFrame.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+    if isUnlocked and input.UserInputType == Enum.UserInputType.MouseButton1 then
         dragging = true
         dragStart = input.Position
         startPos = mainFrame.Position
@@ -448,13 +601,13 @@ mainFrame.InputBegan:Connect(function(input)
 end)
 
 mainFrame.InputChanged:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseMovement then
+    if isUnlocked and input.UserInputType == Enum.UserInputType.MouseMovement then
         dragInput = input
     end
 end)
 
 UIS.InputChanged:Connect(function(input)
-    if input == dragInput and dragging then
+    if isUnlocked and input == dragInput and dragging then
         local delta = input.Position - dragStart
         mainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
     end
@@ -490,36 +643,38 @@ local function getClosestTarget()
 end
 
 RS.RenderStepped:Connect(function()
-    circle.Position = UIS:GetMouseLocation()
-    if States.AimAssist and isTargeting and lockedTarget and lockedTarget.Character and lockedTarget.Character:FindFirstChild("Head") then
-        local head = lockedTarget.Character.Head
-        local predictedPos = head.Position + head.Parent.HumanoidRootPart.Velocity * Settings.Prediction
-        local screenPos, onScreen = Camera:WorldToViewportPoint(predictedPos)
-        local rayOrigin = Camera.CFrame.Position
-        local rayDirection = (predictedPos - rayOrigin).Unit * Settings.AimAssistMaxDistance
-        local raycastParams = RaycastParams.new()
-        raycastParams.FilterDescendantsInstances = {LP.Character}
-        raycastParams.FilterType = Enum.RaycastFilterType.Blacklist
-        local result = workspace:Raycast(rayOrigin, rayDirection, raycastParams)
-        if onScreen and (not result or result.Instance:IsDescendantOf(lockedTarget.Character)) then
-            local mousePos = UIS:GetMouseLocation()
-            local targetPos = Vector2.new(screenPos.X, screenPos.Y)
-            local distance = (targetPos - mousePos).Magnitude
-            if distance <= Settings.AimAssistFOV then
-                local currentCFrame = Camera.CFrame
-                local newCFrame = CFrame.new(currentCFrame.Position, predictedPos)
-                Camera.CFrame = currentCFrame:Lerp(newCFrame, Settings.AimAssistSmoothness)
+    if isUnlocked then
+        circle.Position = UIS:GetMouseLocation()
+        if States.AimAssist and isTargeting and lockedTarget and lockedTarget.Character and lockedTarget.Character:FindFirstChild("Head") then
+            local head = lockedTarget.Character.Head
+            local predictedPos = head.Position + head.Parent.HumanoidRootPart.Velocity * Settings.Prediction
+            local screenPos, onScreen = Camera:WorldToViewportPoint(predictedPos)
+            local rayOrigin = Camera.CFrame.Position
+            local rayDirection = (predictedPos - rayOrigin).Unit * Settings.AimAssistMaxDistance
+            local raycastParams = RaycastParams.new()
+            raycastParams.FilterDescendantsInstances = {LP.Character}
+            raycastParams.FilterType = Enum.RaycastFilterType.Blacklist
+            local result = workspace:Raycast(rayOrigin, rayDirection, raycastParams)
+            if onScreen and (not result or result.Instance:IsDescendantOf(lockedTarget.Character)) then
+                local mousePos = UIS:GetMouseLocation()
+                local targetPos = Vector2.new(screenPos.X, screenPos.Y)
+                local distance = (targetPos - mousePos).Magnitude
+                if distance <= Settings.AimAssistFOV then
+                    local currentCFrame = Camera.CFrame
+                    local newCFrame = CFrame.new(currentCFrame.Position, predictedPos)
+                    Camera.CFrame = currentCFrame:Lerp(newCFrame, Settings.AimAssistSmoothness)
+                else
+                    lockedTarget = nil
+                end
             else
                 lockedTarget = nil
             end
-        else
-            lockedTarget = nil
         end
     end
 end)
 
 UIS.InputBegan:Connect(function(input)
-    if input.KeyCode == Keys.TargetAim and States.TargetAim then
+    if isUnlocked and input.KeyCode == Keys.TargetAim and States.TargetAim then
         isTargeting = true
         if not lockedTarget then
             lockedTarget = getClosestTarget()
@@ -528,14 +683,14 @@ UIS.InputBegan:Connect(function(input)
 end)
 
 UIS.InputEnded:Connect(function(input)
-    if input.KeyCode == Keys.TargetAim then
+    if isUnlocked and input.KeyCode == Keys.TargetAim then
         isTargeting = false
         lockedTarget = nil
     end
 end)
 
 UIS.InputBegan:Connect(function(input)
-    if input.KeyCode == Keys.SilentAim and States.SilentAim then
+    if isUnlocked and input.KeyCode == Keys.SilentAim and States.SilentAim then
         local target = getClosestTarget()
         if target and target.Character and target.Character:FindFirstChild("Head") and List[game.PlaceId] then
             local head = target.Character.Head
