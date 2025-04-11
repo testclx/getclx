@@ -12,11 +12,6 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Players = game:GetService("Players")
 
 local Settings = {
-    AimAssistFOV = 300,
-    AimAssistSmoothness = 0.2,
-    AimAssistMaxDistance = 1000,
-    AimAssistHitbox = "Head",
-    AimAssistFOVColor = Color3.fromRGB(255, 0, 0),
     SilentAimFOV = 300,
     SilentAimHitbox = "HumanoidRootPart",
     SilentAimFOVColor = Color3.fromRGB(0, 255, 0),
@@ -24,6 +19,9 @@ local Settings = {
     TriggerBotFOV = 300,
     TriggerBotHitbox = "HumanoidRootPart",
     TriggerBotFOVColor = Color3.fromRGB(0, 0, 255),
+    TargetAimFOV = 300,
+    TargetAimHitbox = "HumanoidRootPart",
+    TargetAimFOVColor = Color3.fromRGB(255, 255, 0),
     Keybinds = {
         ToggleMenu = Enum.KeyCode.T,
         ToggleSilentAim = Enum.KeyCode.V,
@@ -33,7 +31,6 @@ local Settings = {
 }
 
 local States = {
-    AimAssist = false,
     SilentAim = false,
     TriggerBot = false,
     TargetAim = false
@@ -55,7 +52,7 @@ local List = {
     [17344804827] = {'Yeno Hood', 'UpdateMousePos', 'MainEvent'},
     [16435867341] = {'Mad Hood', 'UpdateMousePos', 'MainEvent'},
     [14412601883] = {'Hood Bank', 'MOUSE', 'MAINEVENT'},
-    [84366677940861] = {'Da Uphill', 'MOUSE', 'MAINEVENT'},
+    [14412436145] = {'Da Uphill', 'MOUSE', 'MAINEVENT'},
     [14487637618] = {'Da Hood Bot Aim Trainer', 'MOUSE', 'MAINEVENT'},
     [11143225577] = {'1v1 Hood Aim Trainer', 'UpdateMousePos', 'MainEvent'},
     [14413712255] = {'Hood Aim', 'MOUSE', 'MAINEVENT'},
@@ -80,14 +77,6 @@ gui.Name = "AimAssistGui"
 gui.Parent = LP:WaitForChild("PlayerGui")
 gui.IgnoreGuiInset = true
 
-local aimAssistCircle = Drawing.new("Circle")
-aimAssistCircle.Thickness = 1.5
-aimAssistCircle.NumSides = 100
-aimAssistCircle.Radius = Settings.AimAssistFOV
-aimAssistCircle.Visible = false
-aimAssistCircle.Color = Settings.AimAssistFOVColor
-aimAssistCircle.Filled = false
-
 local silentAimCircle = Drawing.new("Circle")
 silentAimCircle.Thickness = 1.5
 silentAimCircle.NumSides = 100
@@ -99,7 +88,7 @@ silentAimCircle.Filled = false
 local triggerBotCircle = Drawing.new("Circle")
 triggerBotCircle.Thickness = 1.5
 triggerBotCircle.NumSides = 100
-triggerBotCircle.Radius = Settings.TriggerBotFOV
+triggerBotCircle.Radius = Settings.SilentAimFOV
 triggerBotCircle.Visible = false
 triggerBotCircle.Color = Settings.TriggerBotFOVColor
 triggerBotCircle.Filled = false
@@ -107,9 +96,9 @@ triggerBotCircle.Filled = false
 local targetAimCircle = Drawing.new("Circle")
 targetAimCircle.Thickness = 1.5
 targetAimCircle.NumSides = 100
-targetAimCircle.Radius = Settings.AimAssistFOV
+targetAimCircle.Radius = Settings.TargetAimFOV
 targetAimCircle.Visible = false
-targetAimCircle.Color = Color3.fromRGB(255, 255, 0)
+targetAimCircle.Color = Settings.TargetAimFOVColor
 targetAimCircle.Filled = false
 
 local mainFrame = Instance.new("Frame")
@@ -204,8 +193,11 @@ local function createSlider(labelText, settingKey, min, max, posY)
             label.Text = labelText .. ": " .. value
             if settingKey == "SilentAimFOV" then
                 silentAimCircle.Radius = value
+                triggerBotCircle.Radius = value
             elseif settingKey == "TriggerBotFOV" then
                 triggerBotCircle.Radius = value
+            elseif settingKey == "TargetAimFOV" then
+                targetAimCircle.Radius = value
             end
         else
             slider.Text = tostring(Settings[settingKey])
@@ -243,6 +235,8 @@ local function createColorPicker(labelText, settingKey, defaultColor, posY)
                 silentAimCircle.Color = Settings[settingKey]
             elseif settingKey == "TriggerBotFOVColor" then
                 triggerBotCircle.Color = Settings[settingKey]
+            elseif settingKey == "TargetAimFOVColor" then
+                targetAimCircle.Color = Settings[settingKey]
             end
         else
             input.Text = string.format("%d,%d,%d", defaultColor.R * 255, defaultColor.G * 255, defaultColor.B * 255)
@@ -257,6 +251,8 @@ local triggerBotButton = createToggleButton("TriggerBot", "TriggerBot", 170, "ON
 createSlider("TriggerBot FOV", "TriggerBotFOV", 50, 1000, 210)
 createColorPicker("TriggerBot Color (R,G,B)", "TriggerBotFOVColor", Settings.TriggerBotFOVColor, 260)
 local targetAimButton = createToggleButton("Target Aim", "TargetAim", 330, "ON", "OFF")
+createSlider("Target Aim FOV", "TargetAimFOV", 50, 1000, 370)
+createColorPicker("Target Aim Color (R,G,B)", "TargetAimFOVColor", Settings.TargetAimFOVColor, 420)
 
 local function toggleMenu()
     mainFrame.Visible = not mainFrame.Visible
@@ -293,7 +289,7 @@ end
 local function isVisible(target, hitbox)
     if not target or not target.Character or not target.Character:FindFirstChild(hitbox) then return false end
     local rayOrigin = Camera.CFrame.Position
-    local rayDirection = (target.Character[hitbox].Position - rayOrigin).Unit * Settings.AimAssistMaxDistance
+    local rayDirection = (target.Character[hitbox].Position - rayOrigin).Unit * 1000
     local raycastParams = RaycastParams.new()
     raycastParams.FilterDescendantsInstances = {LP.Character}
     raycastParams.FilterType = Enum.RaycastFilterType.Blacklist
@@ -303,8 +299,6 @@ end
 
 RS.RenderStepped:Connect(function()
     if isUnlocked then
-        aimAssistCircle.Position = UIS:GetMouseLocation()
-        aimAssistCircle.Visible = States.AimAssist
         silentAimCircle.Position = UIS:GetMouseLocation()
         silentAimCircle.Visible = States.SilentAim
         triggerBotCircle.Position = UIS:GetMouseLocation()
@@ -317,12 +311,12 @@ RS.RenderStepped:Connect(function()
             silentTarget = nil
         end
         if States.TriggerBot then
-            triggerTarget = getClosestPlayer(Settings.TriggerBotFOV)
+            triggerTarget = silentTarget or getClosestPlayer(Settings.TriggerBotFOV)
         else
             triggerTarget = nil
         end
         if States.TargetAim then
-            targetAimTarget = getClosestPlayer(Settings.AimAssistFOV)
+            targetAimTarget = getClosestPlayer(Settings.TargetAimFOV)
         else
             targetAimTarget = nil
         end
@@ -341,23 +335,63 @@ local function bulletHooker(target)
     end
 end
 
-local lastTriggerTime = 0
-local triggerCooldown = 0.05
+local HoldClick = true
+local Hotkey = 'c'
+local HotkeyToggle = true
+local Toggle = false
+local CurrentlyPressed = false
+local Mouse = LP:GetMouse()
+
 local function triggerBotFire()
-    if States.TriggerBot and triggerTarget and triggerTarget.Character and triggerTarget.Character:FindFirstChild(Settings.TriggerBotHitbox) then
-        local currentTime = tick()
-        if currentTime - lastTriggerTime >= triggerCooldown then
-            local tool = LP.Character and LP.Character:FindFirstChildOfClass("Tool")
-            if tool and isVisible(triggerTarget, Settings.TriggerBotHitbox) then
+    if States.TriggerBot and triggerTarget and triggerTarget.Character and triggerTarget.Character:FindFirstChild(Settings.TriggerBotHitbox) and LP.Character then
+        local tool = LP.Character:FindFirstChildOfClass("Tool")
+        if tool and isVisible(triggerTarget, Settings.TriggerBotHitbox) then
+            if HoldClick then
+                if not CurrentlyPressed then
+                    CurrentlyPressed = true
+                    tool:Activate()
+                    bulletHooker(triggerTarget)
+                end
+            else
                 tool:Activate()
-                lastTriggerTime = currentTime
-                States.TriggerBot = false
-                triggerBotButton.Text = "TriggerBot: OFF"
-                triggerBotButton.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+                bulletHooker(triggerTarget)
+            end
+        else
+            if HoldClick then
+                CurrentlyPressed = false
             end
         end
     end
 end
+
+Mouse.KeyDown:Connect(function(key)
+    if HotkeyToggle and key == Hotkey then
+        Toggle = not Toggle
+        States.TriggerBot = Toggle
+        triggerBotButton.Text = "TriggerBot: " .. (States.TriggerBot and "ON" or "OFF")
+        triggerBotButton.BackgroundColor3 = States.TriggerBot and Color3.fromRGB(70, 100, 70) or Color3.fromRGB(50, 50, 50)
+    elseif key == Hotkey then
+        Toggle = true
+        States.TriggerBot = Toggle
+        triggerBotButton.Text = "TriggerBot: " .. (States.TriggerBot and "ON" or "OFF")
+        triggerBotButton.BackgroundColor3 = States.TriggerBot and Color3.fromRGB(70, 100, 70) or Color3.fromRGB(50, 50, 50)
+    end
+end)
+
+Mouse.KeyUp:Connect(function(key)
+    if not HotkeyToggle and key == Hotkey then
+        Toggle = false
+        States.TriggerBot = Toggle
+        triggerBotButton.Text = "TriggerBot: " .. (States.TriggerBot and "ON" or "OFF")
+        triggerBotButton.BackgroundColor3 = States.TriggerBot and Color3.fromRGB(70, 100, 70) or Color3.fromRGB(50, 50, 50)
+    end
+end)
+
+RS.RenderStepped:Connect(function()
+    if States.TriggerBot then
+        triggerBotFire()
+    end
+end)
 
 local function connectTool(character)
     if character then
@@ -382,13 +416,6 @@ UIS.InputBegan:Connect(function(input)
         States.SilentAim = not States.SilentAim
         silentAimButton.Text = "Silent Aim: " .. (States.SilentAim and "ON" or "OFF")
         silentAimButton.BackgroundColor3 = States.SilentAim and Color3.fromRGB(70, 100, 70) or Color3.fromRGB(50, 50, 50)
-    elseif input.KeyCode == Settings.Keybinds.ToggleTriggerBot then
-        States.TriggerBot = not States.TriggerBot
-        triggerBotButton.Text = "TriggerBot: " .. (States.TriggerBot and "ON" or "OFF")
-        triggerBotButton.BackgroundColor3 = States.TriggerBot and Color3.fromRGB(70, 100, 70) or Color3.fromRGB(50, 50, 50)
-        if States.TriggerBot then
-            triggerBotFire()
-        end
     elseif input.KeyCode == Settings.Keybinds.ToggleTargetAim then
         States.TargetAim = not States.TargetAim
         targetAimButton.Text = "Target Aim: " .. (States.TargetAim and "ON" or "OFF")
