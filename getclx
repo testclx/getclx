@@ -24,13 +24,10 @@ local Settings = {
     TriggerBotFOV = 300,
     TriggerBotHitbox = "HumanoidRootPart",
     TriggerBotFOVColor = Color3.fromRGB(0, 0, 255),
-    TriggerBotDelay = 0.1,
     Keybinds = {
         ToggleMenu = Enum.KeyCode.T,
-        ToggleAimAssist = Enum.KeyCode.C,
         ToggleSilentAim = Enum.KeyCode.V,
-        ToggleTriggerBot = Enum.KeyCode.B,
-        TriggerBotFire = Enum.KeyCode.Q,
+        ToggleTriggerBot = Enum.KeyCode.C,
         ToggleTargetAim = Enum.KeyCode.X
     }
 }
@@ -42,8 +39,6 @@ local States = {
     TargetAim = false
 }
 local isUnlocked = true
-local isTargeting = false
-local lockedTarget = nil
 local silentTarget = nil
 local triggerTarget = nil
 local targetAimTarget = nil
@@ -82,10 +77,11 @@ local List = {
 
 local gui = Instance.new("ScreenGui")
 gui.Name = "AimAssistGui"
-gui.Parent = game.Players.LocalPlayer:WaitForChild("PlayerGui")
+gui.Parent = LP:WaitForChild("PlayerGui")
+gui.IgnoreGuiInset = true
 
 local aimAssistCircle = Drawing.new("Circle")
-aimAssistCircle.Thickness = 1
+aimAssistCircle.Thickness = 1.5
 aimAssistCircle.NumSides = 100
 aimAssistCircle.Radius = Settings.AimAssistFOV
 aimAssistCircle.Visible = false
@@ -93,7 +89,7 @@ aimAssistCircle.Color = Settings.AimAssistFOVColor
 aimAssistCircle.Filled = false
 
 local silentAimCircle = Drawing.new("Circle")
-silentAimCircle.Thickness = 1
+silentAimCircle.Thickness = 1.5
 silentAimCircle.NumSides = 100
 silentAimCircle.Radius = Settings.SilentAimFOV
 silentAimCircle.Visible = false
@@ -101,7 +97,7 @@ silentAimCircle.Color = Settings.SilentAimFOVColor
 silentAimCircle.Filled = false
 
 local triggerBotCircle = Drawing.new("Circle")
-triggerBotCircle.Thickness = 1
+triggerBotCircle.Thickness = 1.5
 triggerBotCircle.NumSides = 100
 triggerBotCircle.Radius = Settings.TriggerBotFOV
 triggerBotCircle.Visible = false
@@ -109,7 +105,7 @@ triggerBotCircle.Color = Settings.TriggerBotFOVColor
 triggerBotCircle.Filled = false
 
 local targetAimCircle = Drawing.new("Circle")
-targetAimCircle.Thickness = 1
+targetAimCircle.Thickness = 1.5
 targetAimCircle.NumSides = 100
 targetAimCircle.Radius = Settings.AimAssistFOV
 targetAimCircle.Visible = false
@@ -119,183 +115,172 @@ targetAimCircle.Filled = false
 local mainFrame = Instance.new("Frame")
 mainFrame.Size = UDim2.new(0, 200, 0, 300)
 mainFrame.Position = UDim2.new(0.5, -100, 0.5, -150)
-mainFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+mainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
 mainFrame.BorderSizePixel = 0
 mainFrame.ClipsDescendants = true
 mainFrame.Parent = gui
 mainFrame.Visible = false
 
+local mainCorner = Instance.new("UICorner")
+mainCorner.CornerRadius = UDim.new(0, 8)
+mainCorner.Parent = mainFrame
+
+local mainShadow = Instance.new("ImageLabel")
+mainShadow.Size = UDim2.new(1, 20, 1, 20)
+mainShadow.Position = UDim2.new(0, -10, 0, -10)
+mainShadow.BackgroundTransparency = 1
+mainShadow.Image = "rbxassetid://6014261993"
+mainShadow.ImageColor3 = Color3.fromRGB(0, 0, 0)
+mainShadow.ImageTransparency = 0.7
+mainShadow.ScaleType = Enum.ScaleType.Slice
+mainShadow.SliceCenter = Rect.new(10, 10, 10, 10)
+mainShadow.Parent = mainFrame
+mainShadow.ZIndex = -1
+
+local titleLabel = Instance.new("TextLabel")
+titleLabel.Size = UDim2.new(1, 0, 0, 30)
+titleLabel.BackgroundTransparency = 1
+titleLabel.Text = "CLX - Aim Assist"
+titleLabel.TextColor3 = Color3.fromRGB(255, 50, 50)
+titleLabel.TextSize = 18
+titleLabel.Font = Enum.Font.GothamBold
+titleLabel.Parent = mainFrame
+
 local scrollingFrame = Instance.new("ScrollingFrame")
-scrollingFrame.Size = UDim2.new(1, 0, 1, -30)
-scrollingFrame.Position = UDim2.new(0, 0, 0, 30)
+scrollingFrame.Size = UDim2.new(1, -10, 1, -40)
+scrollingFrame.Position = UDim2.new(0, 5, 0, 35)
 scrollingFrame.BackgroundTransparency = 1
-scrollingFrame.ScrollBarThickness = 5
+scrollingFrame.ScrollBarThickness = 3
+scrollingFrame.ScrollBarImageColor3 = Color3.fromRGB(100, 100, 100)
 scrollingFrame.CanvasSize = UDim2.new(0, 0, 0, 400)
 scrollingFrame.Parent = mainFrame
 
-local titleLabel = Instance.new("TextLabel")
-titleLabel.Size = UDim2.new(0, 150, 0, 25)
-titleLabel.Position = UDim2.new(0, 25, 0, 2)
-titleLabel.BackgroundTransparency = 1
-titleLabel.Text = "CLX"
-titleLabel.TextColor3 = Color3.fromRGB(255, 20, 20)
-titleLabel.TextSize = 18
-titleLabel.Font = Enum.Font.SourceSans
-titleLabel.Parent = mainFrame
+local function createToggleButton(name, stateKey, posY, textOn, textOff)
+    local button = Instance.new("TextButton")
+    button.Size = UDim2.new(0, 160, 0, 30)
+    button.Position = UDim2.new(0, 10, 0, posY)
+    button.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+    button.Text = name .. ": " .. (States[stateKey] and textOn or textOff)
+    button.TextColor3 = Color3.fromRGB(255, 255, 255)
+    button.TextSize = 12
+    button.Font = Enum.Font.Gotham
+    button.Parent = scrollingFrame
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, 6)
+    corner.Parent = button
+    button.MouseButton1Click:Connect(function()
+        States[stateKey] = not States[stateKey]
+        button.Text = name .. ": " .. (States[stateKey] and textOn or textOff)
+        button.BackgroundColor3 = States[stateKey] and Color3.fromRGB(70, 100, 70) or Color3.fromRGB(50, 50, 50)
+    end)
+    return button
+end
 
-local aimAssistButton = Instance.new("TextButton")
-aimAssistButton.Size = UDim2.new(0, 150, 0, 25)
-aimAssistButton.Position = UDim2.new(0, 25, 0, 10)
-aimAssistButton.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-aimAssistButton.Text = "Aim Assist: OFF"
-aimAssistButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-aimAssistButton.TextSize = 12
-aimAssistButton.Parent = scrollingFrame
-
-local silentAimButton = Instance.new("TextButton")
-silentAimButton.Size = UDim2.new(0, 150, 0, 25)
-silentAimButton.Position = UDim2.new(0, 25, 0, 40)
-silentAimButton.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-silentAimButton.Text = "Silent Aim: OFF"
-silentAimButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-silentAimButton.TextSize = 12
-silentAimButton.Parent = scrollingFrame
-
-local silentFOVLabel = Instance.new("TextLabel")
-silentFOVLabel.Size = UDim2.new(0, 150, 0, 20)
-silentFOVLabel.Position = UDim2.new(0, 25, 0, 70)
-silentFOVLabel.BackgroundTransparency = 1
-silentFOVLabel.Text = "Silent FOV: " .. Settings.SilentAimFOV
-silentFOVLabel.TextColor3 = Color3.fromRGB(150, 150, 150)
-silentFOVLabel.TextSize = 12
-silentFOVLabel.Parent = scrollingFrame
-
-local silentFOVSlider = Instance.new("TextBox")
-silentFOVSlider.Size = UDim2.new(0, 100, 0, 20)
-silentFOVSlider.Position = UDim2.new(0, 75, 0, 90)
-silentFOVSlider.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
-silentFOVSlider.Text = tostring(Settings.SilentAimFOV)
-silentFOVSlider.TextColor3 = Color3.fromRGB(255, 255, 255)
-silentFOVSlider.TextSize = 12
-silentFOVSlider.Parent = scrollingFrame
-
-local triggerBotButton = Instance.new("TextButton")
-triggerBotButton.Size = UDim2.new(0, 150, 0, 25)
-triggerBotButton.Position = UDim2.new(0, 25, 0, 120)
-triggerBotButton.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-triggerBotButton.Text = "TriggerBot: OFF"
-triggerBotButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-triggerBotButton.TextSize = 12
-triggerBotButton.Parent = scrollingFrame
-
-local triggerBotColorLabel = Instance.new("TextLabel")
-triggerBotColorLabel.Size = UDim2.new(0, 150, 0, 20)
-triggerBotColorLabel.Position = UDim2.new(0, 25, 0, 150)
-triggerBotColorLabel.BackgroundTransparency = 1
-triggerBotColorLabel.Text = "TriggerBot Color (R,G,B):"
-triggerBotColorLabel.TextColor3 = Color3.fromRGB(150, 150, 150)
-triggerBotColorLabel.TextSize = 12
-triggerBotColorLabel.Parent = scrollingFrame
-
-local triggerBotColorInput = Instance.new("TextBox")
-triggerBotColorInput.Size = UDim2.new(0, 100, 0, 20)
-triggerBotColorInput.Position = UDim2.new(0, 75, 0, 170)
-triggerBotColorInput.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
-triggerBotColorInput.Text = "0,0,255"
-triggerBotColorInput.TextColor3 = Color3.fromRGB(255, 255, 255)
-triggerBotColorInput.TextSize = 12
-triggerBotColorInput.Parent = scrollingFrame
-
-local targetAimButton = Instance.new("TextButton")
-targetAimButton.Size = UDim2.new(0, 150, 0, 25)
-targetAimButton.Position = UDim2.new(0, 25, 0, 200)
-targetAimButton.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-targetAimButton.Text = "Target Aim: OFF"
-targetAimButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-targetAimButton.TextSize = 12
-targetAimButton.Parent = scrollingFrame
-
-local keybindLabels = {
-    {Text = "Toggle Menu: ", Key = Settings.Keybinds.ToggleMenu, Pos = UDim2.new(0, 25, 0, 230)},
-    {Text = "Aim Assist: ", Key = Settings.Keybinds.ToggleAimAssist, Pos = UDim2.new(0, 25, 0, 250)},
-    {Text = "Silent Aim: ", Key = Settings.Keybinds.ToggleSilentAim, Pos = UDim2.new(0, 25, 0, 270)},
-    {Text = "TriggerBot: ", Key = Settings.Keybinds.ToggleTriggerBot, Pos = UDim2.new(0, 25, 0, 290)},
-    {Text = "TriggerBot Fire: ", Key = Settings.Keybinds.TriggerBotFire, Pos = UDim2.new(0, 25, 0, 310)},
-    {Text = "Target Aim: ", Key = Settings.Keybinds.ToggleTargetAim, Pos = UDim2.new(0, 25, 0, 330)}
-}
-
-local keybindFields = {}
-for i, label in pairs(keybindLabels) do
-    local textLabel = Instance.new("TextLabel")
-    textLabel.Size = UDim2.new(0, 80, 0, 15)
-    textLabel.Position = label.Pos
-    textLabel.BackgroundTransparency = 1
-    textLabel.Text = label.Text .. tostring(label.Key):match("KeyCode%.(.+)")
-    textLabel.TextColor3 = Color3.fromRGB(150, 150, 150)
-    textLabel.TextSize = 10
-    textLabel.Parent = scrollingFrame
-
-    local inputField = Instance.new("TextButton")
-    inputField.Size = UDim2.new(0, 60, 0, 15)
-    inputField.Position = label.Pos + UDim2.new(0, 90, 0, 0)
-    inputField.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
-    inputField.Text = tostring(label.Key):match("KeyCode%.(.+)")
-    inputField.TextColor3 = Color3.fromRGB(255, 255, 255)
-    inputField.TextSize = 10
-    inputField.Parent = scrollingFrame
-    table.insert(keybindFields, {Field = inputField, Label = textLabel, Key = label.Key, Index = i})
-
-    inputField.MouseButton1Click:Connect(function()
-        inputField.Text = "Press Key..."
-        local connection
-        connection = UIS.InputBegan:Connect(function(input)
-            if input.KeyCode ~= Enum.KeyCode.Unknown then
-                inputField.Text = tostring(input.KeyCode):match("KeyCode%.(.+)")
-                if i == 1 then Settings.Keybinds.ToggleMenu = input.KeyCode
-                elseif i == 2 then Settings.Keybinds.ToggleAimAssist = input.KeyCode
-                elseif i == 3 then Settings.Keybinds.ToggleSilentAim = input.KeyCode
-                elseif i == 4 then Settings.Keybinds.ToggleTriggerBot = input.KeyCode
-                elseif i == 5 then Settings.Keybinds.TriggerBotFire = input.KeyCode
-                elseif i == 6 then Settings.Keybinds.ToggleTargetAim = input.KeyCode end
-                textLabel.Text = label.Text .. inputField.Text
-                connection:Disconnect()
+local function createSlider(labelText, settingKey, min, max, posY)
+    local label = Instance.new("TextLabel")
+    label.Size = UDim2.new(0, 160, 0, 20)
+    label.Position = UDim2.new(0, 10, 0, posY)
+    label.BackgroundTransparency = 1
+    label.Text = labelText .. ": " .. Settings[settingKey]
+    label.TextColor3 = Color3.fromRGB(180, 180, 180)
+    label.TextSize = 12
+    label.Font = Enum.Font.Gotham
+    label.Parent = scrollingFrame
+    local slider = Instance.new("TextBox")
+    slider.Size = UDim2.new(0, 100, 0, 20)
+    slider.Position = UDim2.new(0, 70, 0, posY + 20)
+    slider.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+    slider.Text = tostring(Settings[settingKey])
+    slider.TextColor3 = Color3.fromRGB(255, 255, 255)
+    slider.TextSize = 12
+    slider.Parent = scrollingFrame
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, 4)
+    corner.Parent = slider
+    slider.FocusLost:Connect(function()
+        local value = tonumber(slider.Text)
+        if value and value >= min and value <= max then
+            Settings[settingKey] = value
+            label.Text = labelText .. ": " .. value
+            if settingKey == "SilentAimFOV" then
+                silentAimCircle.Radius = value
+            elseif settingKey == "TriggerBotFOV" then
+                triggerBotCircle.Radius = value
             end
-        end)
+        else
+            slider.Text = tostring(Settings[settingKey])
+        end
     end)
 end
 
-silentFOVSlider.FocusLost:Connect(function()
-    local value = tonumber(silentFOVSlider.Text)
-    if value and value >= 50 and value <= 1000 then
-        Settings.SilentAimFOV = value
-        silentAimCircle.Radius = value
-        silentFOVLabel.Text = "Silent FOV: " .. value
-    else
-        silentFOVSlider.Text = tostring(Settings.SilentAimFOV)
-    end
-end)
+local function createColorPicker(labelText, settingKey, defaultColor, posY)
+    local label = Instance.new("TextLabel")
+    label.Size = UDim2.new(0, 160, 0, 20)
+    label.Position = UDim2.new(0, 10, 0, posY)
+    label.BackgroundTransparency = 1
+    label.Text = labelText
+    label.TextColor3 = Color3.fromRGB(180, 180, 180)
+    label.TextSize = 12
+    label.Font = Enum.Font.Gotham
+    label.Parent = scrollingFrame
+    local input = Instance.new("TextBox")
+    input.Size = UDim2.new(0, 100, 0, 20)
+    input.Position = UDim2.new(0, 70, 0, posY + 20)
+    input.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+    input.Text = string.format("%d,%d,%d", defaultColor.R * 255, defaultColor.G * 255, defaultColor.B * 255)
+    input.TextColor3 = Color3.fromRGB(255, 255, 255)
+    input.TextSize = 12
+    input.Parent = scrollingFrame
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, 4)
+    corner.Parent = input
+    input.FocusLost:Connect(function()
+        local r, g, b = input.Text:match("(%d+),(%d+),(%d+)")
+        r, g, b = tonumber(r), tonumber(g), tonumber(b)
+        if r and g and b and r >= 0 and r <= 255 and g >= 0 and g <= 255 and b >= 0 and b <= 255 then
+            Settings[settingKey] = Color3.fromRGB(r, g, b)
+            if settingKey == "SilentAimFOVColor" then
+                silentAimCircle.Color = Settings[settingKey]
+            elseif settingKey == "TriggerBotFOVColor" then
+                triggerBotCircle.Color = Settings[settingKey]
+            end
+        else
+            input.Text = string.format("%d,%d,%d", defaultColor.R * 255, defaultColor.G * 255, defaultColor.B * 255)
+        end
+    end)
+end
 
-triggerBotColorInput.FocusLost:Connect(function()
-    local r, g, b = triggerBotColorInput.Text:match("(%d+),(%d+),(%d+)")
-    r, g, b = tonumber(r), tonumber(g), tonumber(b)
-    if r and g and b and r >= 0 and r <= 255 and g >= 0 and g <= 255 and b >= 0 and b <= 255 then
-        Settings.TriggerBotFOVColor = Color3.fromRGB(r, g, b)
-        triggerBotCircle.Color = Settings.TriggerBotFOVColor
+local silentAimButton = createToggleButton("Silent Aim", "SilentAim", 10, "ON", "OFF")
+createSlider("Silent FOV", "SilentAimFOV", 50, 1000, 50)
+createColorPicker("Silent Color (R,G,B)", "SilentAimFOVColor", Settings.SilentAimFOVColor, 100)
+local triggerBotButton = createToggleButton("TriggerBot", "TriggerBot", 170, "ON", "OFF")
+createSlider("TriggerBot FOV", "TriggerBotFOV", 50, 1000, 210)
+createColorPicker("TriggerBot Color (R,G,B)", "TriggerBotFOVColor", Settings.TriggerBotFOVColor, 260)
+local targetAimButton = createToggleButton("Target Aim", "TargetAim", 330, "ON", "OFF")
+
+local function toggleMenu()
+    mainFrame.Visible = not mainFrame.Visible
+    if mainFrame.Visible then
+        mainFrame:TweenSizeAndPosition(
+            UDim2.new(0, 200, 0, 300), UDim2.new(0.5, -100, 0.5, -150),
+            "Out", "Quad", 0.3, true
+        )
     else
-        triggerBotColorInput.Text = "0,0,255"
+        mainFrame:TweenSizeAndPosition(
+            UDim2.new(0, 200, 0, 0), UDim2.new(0.5, -100, 0.5, -150),
+            "In", "Quad", 0.3, true
+        )
     end
-end)
+end
 
 local function getClosestPlayer(fov)
     local radius = fov
     local mousePos = UIS:GetMouseLocation()
     local target = nil
-
     for _, player in pairs(Players:GetPlayers()) do
         if player ~= LP and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
             local viewportPos = Camera:WorldToViewportPoint(player.Character.HumanoidRootPart.Position)
             local distance = (Vector2.new(viewportPos.X, viewportPos.Y) - mousePos).Magnitude
-
             if distance < radius then
                 radius = distance
                 target = player
@@ -326,43 +311,16 @@ RS.RenderStepped:Connect(function()
         triggerBotCircle.Visible = States.TriggerBot
         targetAimCircle.Position = UIS:GetMouseLocation()
         targetAimCircle.Visible = States.TargetAim
-
-        if States.AimAssist and isTargeting and lockedTarget and lockedTarget.Character and lockedTarget.Character:FindFirstChild(Settings.AimAssistHitbox) then
-            local hitbox = lockedTarget.Character[Settings.AimAssistHitbox]
-            local predictedPos = hitbox.Position + hitbox.Parent.HumanoidRootPart.Velocity * Settings.Prediction[1]
-            local screenPos, onScreen = Camera:WorldToViewportPoint(predictedPos)
-
-            if onScreen and isVisible(lockedTarget, Settings.AimAssistHitbox) then
-                local mousePos = UIS:GetMouseLocation()
-                local targetPos = Vector2.new(screenPos.X, screenPos.Y)
-                local distance = (targetPos - mousePos).Magnitude
-
-                if distance <= Settings.AimAssistFOV then
-                    local currentCFrame = Camera.CFrame
-                    local newCFrame = CFrame.new(currentCFrame.Position, predictedPos)
-                    Camera.CFrame = currentCFrame:Lerp(newCFrame, Settings.AimAssistSmoothness)
-                else
-                    lockedTarget = nil
-                    isTargeting = false
-                end
-            else
-                lockedTarget = nil
-                isTargeting = false
-            end
-        end
-
         if States.SilentAim then
             silentTarget = getClosestPlayer(Settings.SilentAimFOV)
         else
             silentTarget = nil
         end
-
         if States.TriggerBot then
             triggerTarget = getClosestPlayer(Settings.TriggerBotFOV)
         else
             triggerTarget = nil
         end
-
         if States.TargetAim then
             targetAimTarget = getClosestPlayer(Settings.AimAssistFOV)
         else
@@ -384,14 +342,18 @@ local function bulletHooker(target)
 end
 
 local lastTriggerTime = 0
+local triggerCooldown = 0.05
 local function triggerBotFire()
     if States.TriggerBot and triggerTarget and triggerTarget.Character and triggerTarget.Character:FindFirstChild(Settings.TriggerBotHitbox) then
         local currentTime = tick()
-        if currentTime - lastTriggerTime >= Settings.TriggerBotDelay then
+        if currentTime - lastTriggerTime >= triggerCooldown then
             local tool = LP.Character and LP.Character:FindFirstChildOfClass("Tool")
             if tool and isVisible(triggerTarget, Settings.TriggerBotHitbox) then
                 tool:Activate()
                 lastTriggerTime = currentTime
+                States.TriggerBot = false
+                triggerBotButton.Text = "TriggerBot: OFF"
+                triggerBotButton.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
             end
         end
     end
@@ -413,46 +375,23 @@ end
 LP.CharacterAdded:Connect(connectTool)
 if LP.Character then connectTool(LP.Character) end
 
-aimAssistButton.MouseButton1Click:Connect(function()
-    States.AimAssist = not States.AimAssist
-    aimAssistButton.Text = "Aim Assist: " .. (States.AimAssist and "ON" or "OFF")
-end)
-
-silentAimButton.MouseButton1Click:Connect(function()
-    States.SilentAim = not States.SilentAim
-    silentAimButton.Text = "Silent Aim: " .. (States.SilentAim and "ON" or "OFF")
-end)
-
-triggerBotButton.MouseButton1Click:Connect(function()
-    States.TriggerBot = not States.TriggerBot
-    triggerBotButton.Text = "TriggerBot: " .. (States.TriggerBot and "ON" or "OFF")
-end)
-
-targetAimButton.MouseButton1Click:Connect(function()
-    States.TargetAim = not States.TargetAim
-    targetAimButton.Text = "Target Aim: " .. (States.TargetAim and "ON" or "OFF")
-end)
-
 UIS.InputBegan:Connect(function(input)
     if input.KeyCode == Settings.Keybinds.ToggleMenu then
-        mainFrame.Visible = not mainFrame.Visible
-    elseif input.KeyCode == Settings.Keybinds.ToggleAimAssist then
-        isTargeting = not isTargeting
-        lockedTarget = isTargeting and getClosestPlayer(Settings.AimAssistFOV) or nil
-        print("Cible verrouillée (Aim Assist):", lockedTarget and lockedTarget.Name or "Aucune")
+        toggleMenu()
     elseif input.KeyCode == Settings.Keybinds.ToggleSilentAim then
         States.SilentAim = not States.SilentAim
         silentAimButton.Text = "Silent Aim: " .. (States.SilentAim and "ON" or "OFF")
-        print("Silent Aim:", States.SilentAim and "Activé" or "Désactivé")
+        silentAimButton.BackgroundColor3 = States.SilentAim and Color3.fromRGB(70, 100, 70) or Color3.fromRGB(50, 50, 50)
     elseif input.KeyCode == Settings.Keybinds.ToggleTriggerBot then
         States.TriggerBot = not States.TriggerBot
         triggerBotButton.Text = "TriggerBot: " .. (States.TriggerBot and "ON" or "OFF")
-        print("TriggerBot:", States.TriggerBot and "Activé" or "Désactivé")
-    elseif input.KeyCode == Settings.Keybinds.TriggerBotFire then
-        triggerBotFire()
+        triggerBotButton.BackgroundColor3 = States.TriggerBot and Color3.fromRGB(70, 100, 70) or Color3.fromRGB(50, 50, 50)
+        if States.TriggerBot then
+            triggerBotFire()
+        end
     elseif input.KeyCode == Settings.Keybinds.ToggleTargetAim then
         States.TargetAim = not States.TargetAim
         targetAimButton.Text = "Target Aim: " .. (States.TargetAim and "ON" or "OFF")
-        print("Target Aim:", States.TargetAim and "Activé" or "Désactivé")
+        targetAimButton.BackgroundColor3 = States.TargetAim and Color3.fromRGB(70, 100, 70) or Color3.fromRGB(50, 50, 50)
     end
 end)
