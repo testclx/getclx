@@ -1,11 +1,9 @@
--- Assure que LocalPlayer est chargé
 local LP = game.Players.LocalPlayer
 if not LP then
     game.Players.PlayerAdded:Wait()
     LP = game.Players.LocalPlayer
 end
 
--- Définir les services
 local TS = game:GetService("TweenService")
 local UIS = game:GetService("UserInputService")
 local RS = game:GetService("RunService")
@@ -13,38 +11,29 @@ local Camera = workspace.CurrentCamera
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Players = game:GetService("Players")
 
--- Paramètres personnalisables
 local Settings = {
-    -- Paramètres de l'aim assist
     AimAssistFOV = 300,
     AimAssistSmoothness = 0.2,
     AimAssistMaxDistance = 1000,
     AimAssistHitbox = "Head",
     AimAssistFOVColor = Color3.fromRGB(255, 0, 0),
-
-    -- Paramètres du silent aim
     SilentAimFOV = 300,
     SilentAimHitbox = "HumanoidRootPart",
     SilentAimFOVColor = Color3.fromRGB(0, 255, 0),
     Prediction = {0.13544, 0.13544, 0.13544},
-
-    -- Paramètres du triggerbot
     TriggerBotFOV = 300,
     TriggerBotHitbox = "HumanoidRootPart",
     TriggerBotFOVColor = Color3.fromRGB(0, 0, 255),
     TriggerBotDelay = 0.1,
-
-    -- Paramètres généraux (keybinds par défaut)
     Keybinds = {
         ToggleMenu = Enum.KeyCode.T,
         ToggleAimAssist = Enum.KeyCode.C,
         ToggleSilentAim = Enum.KeyCode.V,
         ToggleTriggerBot = Enum.KeyCode.B,
-        ToggleTargetAim = Enum.KeyCode.X -- Nouvelle touche pour Target Aim
+        ToggleTargetAim = Enum.KeyCode.X
     }
 }
 
--- Variables d'état
 local States = {
     AimAssist = false,
     SilentAim = false,
@@ -56,9 +45,8 @@ local isTargeting = false
 local lockedTarget = nil
 local silentTarget = nil
 local triggerTarget = nil
-local targetAimTarget = nil -- Nouvelle variable pour Target Aim
+local targetAimTarget = nil
 
--- Liste des jeux compatibles
 local List = {
     [16469595315] = {'Del Hood Aim', 'UpdateMousePos', 'MainEvent'},
     [17319408836] = {'OG Da Hood', 'UpdateMousePos', 'MainEvent'},
@@ -91,12 +79,10 @@ local List = {
     [14412355918] = {'Da Downhill', 'MOUSE', 'MAINEVENT'}
 }
 
--- Créer un ScreenGui pour l'interface
 local gui = Instance.new("ScreenGui")
 gui.Name = "AimAssistGui"
 gui.Parent = game.Players.LocalPlayer:WaitForChild("PlayerGui")
 
--- Cercles de dessin (FOV)
 local aimAssistCircle = Drawing.new("Circle")
 aimAssistCircle.Thickness = 1
 aimAssistCircle.NumSides = 100
@@ -121,17 +107,16 @@ triggerBotCircle.Visible = false
 triggerBotCircle.Color = Settings.TriggerBotFOVColor
 triggerBotCircle.Filled = false
 
-local targetAimCircle = Drawing.new("Circle") -- Nouveau cercle pour Target Aim
+local targetAimCircle = Drawing.new("Circle")
 targetAimCircle.Thickness = 1
 targetAimCircle.NumSides = 100
-targetAimCircle.Radius = Settings.AimAssistFOV -- Réutilise le FOV de l'Aim Assist pour simplicité
+targetAimCircle.Radius = Settings.AimAssistFOV
 targetAimCircle.Visible = false
-targetAimCircle.Color = Color3.fromRGB(255, 255, 0) -- Couleur jaune pour Target Aim
+targetAimCircle.Color = Color3.fromRGB(255, 255, 0)
 targetAimCircle.Filled = false
 
--- Interface principale
 local mainFrame = Instance.new("Frame")
-mainFrame.Size = UDim2.new(0, 400, 0, 600) -- Ajusté pour inclure les keybinds personnalisables
+mainFrame.Size = UDim2.new(0, 400, 0, 600)
 mainFrame.Position = UDim2.new(0.5, -200, 0.5, -300)
 mainFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
 mainFrame.BorderSizePixel = 0
@@ -157,7 +142,6 @@ toggleButton.Text = "Menu"
 toggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
 toggleButton.Parent = gui
 
--- Boutons pour activer/désactiver les fonctionnalités
 local aimAssistButton = Instance.new("TextButton")
 aimAssistButton.Size = UDim2.new(0, 300, 0, 50)
 aimAssistButton.Position = UDim2.new(0, 50, 0, 60)
@@ -182,7 +166,7 @@ triggerBotButton.Text = "TriggerBot: OFF"
 triggerBotButton.TextColor3 = Color3.fromRGB(255, 255, 255)
 triggerBotButton.Parent = mainFrame
 
-local targetAimButton = Instance.new("TextButton") -- Nouveau bouton pour Target Aim
+local targetAimButton = Instance.new("TextButton")
 targetAimButton.Size = UDim2.new(0, 300, 0, 50)
 targetAimButton.Position = UDim2.new(0, 50, 0, 240)
 targetAimButton.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
@@ -190,7 +174,6 @@ targetAimButton.Text = "Target Aim: OFF"
 targetAimButton.TextColor3 = Color3.fromRGB(255, 255, 255)
 targetAimButton.Parent = mainFrame
 
--- Champs pour personnaliser les keybinds
 local keybindLabels = {
     {Text = "Toggle Menu: ", Key = Settings.Keybinds.ToggleMenu, Pos = UDim2.new(0, 50, 0, 300)},
     {Text = "Aim Assist: ", Key = Settings.Keybinds.ToggleAimAssist, Pos = UDim2.new(0, 50, 0, 330)},
@@ -237,7 +220,6 @@ for i, label in pairs(keybindLabels) do
     end)
 end
 
--- Fonction pour trouver la cible la plus proche
 local function getClosestPlayer(fov)
     local radius = fov
     local mousePos = UIS:GetMouseLocation()
@@ -257,7 +239,6 @@ local function getClosestPlayer(fov)
     return target
 end
 
--- Vérification de visibilité
 local function isVisible(target, hitbox)
     if not target or not target.Character or not target.Character:FindFirstChild(hitbox) then return false end
     local rayOrigin = Camera.CFrame.Position
@@ -269,20 +250,17 @@ local function isVisible(target, hitbox)
     return not result or result.Instance:IsDescendantOf(target.Character)
 end
 
--- Logique principale
 RS.RenderStepped:Connect(function()
     if isUnlocked then
-        -- Mettre à jour les cercles FOV
         aimAssistCircle.Position = UIS:GetMouseLocation()
         aimAssistCircle.Visible = States.AimAssist
         silentAimCircle.Position = UIS:GetMouseLocation()
         silentAimCircle.Visible = States.SilentAim
         triggerBotCircle.Position = UIS:GetMouseLocation()
         triggerBotCircle.Visible = States.TriggerBot
-        targetAimCircle.Position = UIS:GetMouseLocation() -- Mettre à jour le cercle du Target Aim
+        targetAimCircle.Position = UIS:GetMouseLocation()
         targetAimCircle.Visible = States.TargetAim
 
-        -- Aim Assist
         if States.AimAssist and isTargeting and lockedTarget and lockedTarget.Character and lockedTarget.Character:FindFirstChild(Settings.AimAssistHitbox) then
             local hitbox = lockedTarget.Character[Settings.AimAssistHitbox]
             local predictedPos = hitbox.Position + hitbox.Parent.HumanoidRootPart.Velocity * Settings.Prediction[1]
@@ -307,21 +285,18 @@ RS.RenderStepped:Connect(function()
             end
         end
 
-        -- Silent Aim
         if States.SilentAim then
             silentTarget = getClosestPlayer(Settings.SilentAimFOV)
         else
             silentTarget = nil
         end
 
-        -- TriggerBot
         if States.TriggerBot then
             triggerTarget = getClosestPlayer(Settings.TriggerBotFOV)
         else
             triggerTarget = nil
         end
 
-        -- Target Aim (basé sur ton script original)
         if States.TargetAim then
             targetAimTarget = getClosestPlayer(Settings.AimAssistFOV)
         else
@@ -330,7 +305,6 @@ RS.RenderStepped:Connect(function()
     end
 end)
 
--- Fonction pour le Target Aim (bulletHooker)
 local function bulletHooker(target)
     if List[game.PlaceId] and target and target.Character and target.Character:FindFirstChild(Settings.SilentAimHitbox) then
         local hitbox = target.Character[Settings.SilentAimHitbox]
@@ -343,7 +317,6 @@ local function bulletHooker(target)
     end
 end
 
--- Fonction pour le TriggerBot
 local lastTriggerTime = 0
 local function triggerBotFire()
     if States.TriggerBot and triggerTarget and triggerTarget.Character and triggerTarget.Character:FindFirstChild(Settings.TriggerBotHitbox) then
@@ -358,15 +331,14 @@ local function triggerBotFire()
     end
 end
 
--- Connecter les outils
 local function connectTool(character)
     if character then
         character.ChildAdded:Connect(function(child)
             if child:IsA("Tool") then
                 child.Activated:Connect(function()
-                    bulletHooker(silentTarget) -- Silent Aim
-                    bulletHooker(targetAimTarget) -- Target Aim
-                    triggerBotFire() -- TriggerBot
+                    bulletHooker(silentTarget)
+                    bulletHooker(targetAimTarget)
+                    triggerBotFire()
                 end)
             end
         end)
@@ -376,7 +348,6 @@ end
 LP.CharacterAdded:Connect(connectTool)
 if LP.Character then connectTool(LP.Character) end
 
--- Contrôles via l'interface
 toggleButton.MouseButton1Click:Connect(function()
     mainFrame.Visible = not mainFrame.Visible
 end)
@@ -396,12 +367,11 @@ triggerBotButton.MouseButton1Click:Connect(function()
     triggerBotButton.Text = "TriggerBot: " .. (States.TriggerBot and "ON" or "OFF")
 end)
 
-targetAimButton.MouseButton1Click:Connect(function() -- Nouveau contrôle pour Target Aim
+targetAimButton.MouseButton1Click:Connect(function()
     States.TargetAim = not States.TargetAim
     targetAimButton.Text = "Target Aim: " .. (States.TargetAim and "ON" or "OFF")
 end)
 
--- Contrôles via les touches
 UIS.InputBegan:Connect(function(input)
     if input.KeyCode == Settings.Keybinds.ToggleMenu then
         mainFrame.Visible = not mainFrame.Visible
