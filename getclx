@@ -116,90 +116,90 @@ targetAimCircle.Color = Color3.fromRGB(255, 255, 0)
 targetAimCircle.Filled = false
 
 local mainFrame = Instance.new("Frame")
-mainFrame.Size = UDim2.new(0, 400, 0, 600)
-mainFrame.Position = UDim2.new(0.5, -200, 0.5, -300)
+mainFrame.Size = UDim2.new(0, 300, 0, 500)
+mainFrame.Position = UDim2.new(0.5, -150, 0.5, -250)
 mainFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
 mainFrame.BorderSizePixel = 0
 mainFrame.ClipsDescendants = true
 mainFrame.Parent = gui
 mainFrame.Visible = false
 
+local scrollingFrame = Instance.new("ScrollingFrame")
+scrollingFrame.Size = UDim2.new(1, 0, 1, -50)
+scrollingFrame.Position = UDim2.new(0, 0, 0, 50)
+scrollingFrame.BackgroundTransparency = 1
+scrollingFrame.ScrollBarThickness = 5
+scrollingFrame.CanvasSize = UDim2.new(0, 0, 0, 600)
+scrollingFrame.Parent = mainFrame
+
 local titleLabel = Instance.new("TextLabel")
-titleLabel.Size = UDim2.new(0, 300, 0, 40)
-titleLabel.Position = UDim2.new(0, 50, 0, 10)
+titleLabel.Size = UDim2.new(0, 200, 0, 40)
+titleLabel.Position = UDim2.new(0, 50, 0, 5)
 titleLabel.BackgroundTransparency = 1
-titleLabel.Text = "Grok's Aimbot Menu"
-titleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-titleLabel.TextSize = 20
-titleLabel.Font = Enum.Font.SourceSansBold
+titleLabel.Text = "CLX"
+titleLabel.TextColor3 = Color3.fromRGB(255, 20, 20)
+titleLabel.TextSize = 24
+titleLabel.Font = Enum.Font.Neon
 titleLabel.Parent = mainFrame
 
-local toggleButton = Instance.new("TextButton")
-toggleButton.Size = UDim2.new(0, 50, 0, 50)
-toggleButton.Position = UDim2.new(0, 10, 0, 10)
-toggleButton.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-toggleButton.Text = "Menu"
-toggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-toggleButton.Parent = gui
-
 local aimAssistButton = Instance.new("TextButton")
-aimAssistButton.Size = UDim2.new(0, 300, 0, 50)
-aimAssistButton.Position = UDim2.new(0, 50, 0, 60)
+aimAssistButton.Size = UDim2.new(0, 250, 0, 40)
+aimAssistButton.Position = UDim2.new(0, 25, 0, 10)
 aimAssistButton.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
 aimAssistButton.Text = "Aim Assist: OFF"
 aimAssistButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-aimAssistButton.Parent = mainFrame
+aimAssistButton.Parent = scrollingFrame
 
 local silentAimButton = Instance.new("TextButton")
-silentAimButton.Size = UDim2.new(0, 300, 0, 50)
-silentAimButton.Position = UDim2.new(0, 50, 0, 120)
+silentAimButton.Size = UDim2.new(0, 250, 0, 40)
+silentAimButton.Position = UDim2.new(0, 25, 0, 60)
 silentAimButton.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
 silentAimButton.Text = "Silent Aim: OFF"
 silentAimButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-silentAimButton.Parent = mainFrame
+silentAimButton.Parent = scrollingFrame
 
 local triggerBotButton = Instance.new("TextButton")
-triggerBotButton.Size = UDim2.new(0, 300, 0, 50)
-triggerBotButton.Position = UDim2.new(0, 50, 0, 180)
+triggerBotButton.Size = UDim2.new(0, 250, 0, 40)
+triggerBotButton.Position = UDim2.new(0, 25, 0, 110)
 triggerBotButton.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
 triggerBotButton.Text = "TriggerBot: OFF"
 triggerBotButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-triggerBotButton.Parent = mainFrame
+triggerBotButton.Parent = scrollingFrame
 
 local targetAimButton = Instance.new("TextButton")
-targetAimButton.Size = UDim2.new(0, 300, 0, 50)
-targetAimButton.Position = UDim2.new(0, 50, 0, 240)
+targetAimButton.Size = UDim2.new(0, 250, 0, 40)
+targetAimButton.Position = UDim2.new(0, 25, 0, 160)
 targetAimButton.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
 targetAimButton.Text = "Target Aim: OFF"
 targetAimButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-targetAimButton.Parent = mainFrame
+targetAimButton.Parent = scrollingFrame
 
 local keybindLabels = {
-    {Text = "Toggle Menu: ", Key = Settings.Keybinds.ToggleMenu, Pos = UDim2.new(0, 50, 0, 300)},
-    {Text = "Aim Assist: ", Key = Settings.Keybinds.ToggleAimAssist, Pos = UDim2.new(0, 50, 0, 330)},
-    {Text = "Silent Aim: ", Key = Settings.Keybinds.ToggleSilentAim, Pos = UDim2.new(0, 50, 0, 360)},
-    {Text = "TriggerBot: ", Key = Settings.Keybinds.ToggleTriggerBot, Pos = UDim2.new(0, 50, 0, 390)},
-    {Text = "Target Aim: ", Key = Settings.Keybinds.ToggleTargetAim, Pos = UDim2.new(0, 50, 0, 420)}
+    {Text = "Toggle Menu: ", Key = Settings.Keybinds.ToggleMenu, Pos = UDim2.new(0, 25, 0, 210)},
+    {Text = "Aim Assist: ", Key = Settings.Keybinds.ToggleAimAssist, Pos = UDim2.new(0, 25, 0, 260)},
+    {Text = "Silent Aim: ", Key = Settings.Keybinds.ToggleSilentAim, Pos = UDim2.new(0, 25, 0, 310)},
+    {Text = "TriggerBot: ", Key = Settings.Keybinds.ToggleTriggerBot, Pos = UDim2.new(0, 25, 0, 360)},
+    {Text = "Target Aim: ", Key = Settings.Keybinds.ToggleTargetAim, Pos = UDim2.new(0, 25, 0, 410)}
 }
 
 local keybindFields = {}
 for i, label in pairs(keybindLabels) do
     local textLabel = Instance.new("TextLabel")
-    textLabel.Size = UDim2.new(0, 150, 0, 20)
+    textLabel.Size = UDim2.new(0, 120, 0, 20)
     textLabel.Position = label.Pos
     textLabel.BackgroundTransparency = 1
     textLabel.Text = label.Text .. tostring(label.Key):match("KeyCode%.(.+)")
     textLabel.TextColor3 = Color3.fromRGB(150, 150, 150)
     textLabel.TextSize = 14
-    textLabel.Parent = mainFrame
+    textLabel.Parent = scrollingFrame
 
     local inputField = Instance.new("TextButton")
-    inputField.Size = UDim2.new(0, 100, 0, 20)
-    inputField.Position = label.Pos + UDim2.new(0, 160, 0, 0)
+    inputField.Size = UDim2.new(0, 80, 0, 20)
+    inputField.Position = label.Pos + UDim2.new(0, 130, 0, 0)
     inputField.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
     inputField.Text = tostring(label.Key):match("KeyCode%.(.+)")
     inputField.TextColor3 = Color3.fromRGB(255, 255, 255)
-    inputField.Parent = mainFrame
+    inputField.Parent = scrollingFrame
     table.insert(keybindFields, {Field = inputField, Label = textLabel, Key = label.Key, Index = i})
 
     inputField.MouseButton1Click:Connect(function()
@@ -347,10 +347,6 @@ end
 
 LP.CharacterAdded:Connect(connectTool)
 if LP.Character then connectTool(LP.Character) end
-
-toggleButton.MouseButton1Click:Connect(function()
-    mainFrame.Visible = not mainFrame.Visible
-end)
 
 aimAssistButton.MouseButton1Click:Connect(function()
     States.AimAssist = not States.AimAssist
