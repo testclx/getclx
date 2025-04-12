@@ -7,11 +7,10 @@ _G.AimAssistScriptLoaded = true
 local Players = game:GetService("Players")
 local LP
 local success, err = pcall(function()
-    LP = Players.LocalPlayer
-    if not LP then
-        Players.PlayerAdded:Wait()
+    repeat
         LP = Players.LocalPlayer
-    end
+        wait()
+    until LP and LP.Parent
 end)
 if not success then
     warn("Erreur lors du chargement du LocalPlayer : " .. tostring(err))
@@ -85,7 +84,6 @@ local List = {
     [14412355918] = {'Da Downhill', 'MOUSE', 'MAINEVENT'}
 }
 
--- Vérifie si le PlaceId est supporté
 if not List[game.PlaceId] then
     warn("Ce jeu (PlaceId: " .. game.PlaceId .. ") n'est pas supporté par ce script.")
     return
@@ -99,7 +97,10 @@ local function createGui()
     local success, result = pcall(function()
         local gui = Instance.new("ScreenGui")
         gui.Name = "AimAssistGui"
-        gui.Parent = LP:WaitForChild("PlayerGui")
+        gui.Parent = LP:WaitForChild("PlayerGui", 10)
+        if not gui.Parent then
+            error("PlayerGui not found after waiting")
+        end
         gui.IgnoreGuiInset = true
         gui.ResetOnSpawn = false
 
@@ -128,6 +129,7 @@ local function createGui()
         mainFrame.BorderSizePixel = 0
         mainFrame.ClipsDescendants = true
         mainFrame.Parent = gui
+        mainFrame.Visible = true
 
         local mainCorner = Instance.new("UICorner")
         mainCorner.CornerRadius = UDim.new(0, 8)
@@ -174,6 +176,7 @@ local function createGui()
         triggerBotFOVToggle.TextSize = 12
         triggerBotFOVToggle.Font = Enum.Font.Gotham
         triggerBotFOVToggle.Parent = mainFrame
+        triggerBotFOVToggle.ZIndex = 2
         local triggerBotFOVCorner = Instance.new("UICorner")
         triggerBotFOVCorner.CornerRadius = UDim.new(0, 4)
         triggerBotFOVCorner.Parent = triggerBotFOVToggle
@@ -198,6 +201,7 @@ local function createGui()
         silentAimFOVToggle.TextSize = 12
         silentAimFOVToggle.Font = Enum.Font.Gotham
         silentAimFOVToggle.Parent = mainFrame
+        silentAimFOVToggle.ZIndex = 2
         local silentAimFOVCorner = Instance.new("UICorner")
         silentAimFOVCorner.CornerRadius = UDim.new(0, 4)
         silentAimFOVCorner.Parent = silentAimFOVToggle
@@ -235,14 +239,14 @@ local function createGui()
 end
 
 local result = createGui()
-if result then
-    gui, mainFrame, silentAimFrame, triggerBotFrame, 
-    triggerBotLabel, silentAimLabel, silentAimFOVLabel,
-    triggerBotFOVToggle, silentAimFOVToggle, scrollingFrame = unpack(result)
-else
-    warn("Échec de l'initialisation du GUI.")
+if not result then
+    warn("Échec de l'initialisation du GUI. Arrêt du script.")
     return
 end
+
+gui, mainFrame, silentAimFrame, triggerBotFrame, 
+triggerBotLabel, silentAimLabel, silentAimFOVLabel,
+triggerBotFOVToggle, silentAimFOVToggle, scrollingFrame = unpack(result)
 
 local function createSlider(labelText, settingKey, min, max, posY)
     local label = Instance.new("TextLabel")
