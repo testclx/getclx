@@ -86,21 +86,23 @@ local function createGui()
         gui.IgnoreGuiInset = true
         gui.ResetOnSpawn = false
 
-        local silentAimCircle = Drawing.new("Circle")
-        silentAimCircle.Thickness = 1.5
-        silentAimCircle.NumSides = 100
-        silentAimCircle.Radius = Settings.SilentAimFOV
-        silentAimCircle.Visible = false
-        silentAimCircle.Color = Settings.SilentAimFOVColor
-        silentAimCircle.Filled = false
+        local silentAimFrame = Instance.new("Frame", gui)
+        silentAimFrame.Size = UDim2.new(0, Settings.SilentAimFOV * 2, 0, Settings.SilentAimFOV * 2)
+        silentAimFrame.BackgroundTransparency = 1
+        silentAimFrame.BorderSizePixel = 2
+        silentAimFrame.BorderColor3 = Settings.SilentAimFOVColor
+        silentAimFrame.Visible = false
+        local silentAimAspect = Instance.new("UIAspectRatioConstraint", silentAimFrame)
+        silentAimAspect.AspectRatio = 1
 
-        local triggerBotCircle = Drawing.new("Circle")
-        triggerBotCircle.Thickness = 1.5
-        triggerBotCircle.NumSides = 100
-        triggerBotCircle.Radius = Settings.SilentAimFOV
-        triggerBotCircle.Visible = false
-        triggerBotCircle.Color = Settings.TriggerBotFOVColor
-        triggerBotCircle.Filled = false
+        local triggerBotFrame = Instance.new("Frame", gui)
+        triggerBotFrame.Size = UDim2.new(0, Settings.SilentAimFOV * 2, 0, Settings.SilentAimFOV * 2)
+        triggerBotFrame.BackgroundTransparency = 1
+        triggerBotFrame.BorderSizePixel = 2
+        triggerBotFrame.BorderColor3 = Settings.TriggerBotFOVColor
+        triggerBotFrame.Visible = false
+        local triggerBotAspect = Instance.new("UIAspectRatioConstraint", triggerBotFrame)
+        triggerBotAspect.AspectRatio = 1
 
         local mainFrame = Instance.new("Frame")
         mainFrame.Size = UDim2.new(0, 300, 0, 250)
@@ -188,38 +190,7 @@ local function createGui()
         silentAimFOVLabel.Position = UDim2.new(0, 5, 0, 65)
         silentAimFOVLabel.BackgroundTransparency = 1
         silentAimFOVLabel.Text = "Silent Aim FOV: " .. Settings.SilentAimFOV
-        silentAimFOVLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-        silentAimFOVLabel.TextSize = 12
-        silentAimFOVLabel.Font = Enum.Font.Gotham
-        silentAimFOVLabel.TextXAlignment = Enum.TextXAlignment.Left
-        silentAimFOVLabel.Parent = mainFrame
-
-        local scrollingFrame = Instance.new("ScrollingFrame")
-        scrollingFrame.Size = UDim2.new(1, -10, 0, 150)
-        scrollingFrame.Position = UDim2.new(0, 5, 0, 85)
-        scrollingFrame.BackgroundTransparency = 1
-        scrollingFrame.ScrollBarThickness = 3
-        scrollingFrame.ScrollBarImageColor3 = Color3.fromRGB(100, 100, 100)
-        scrollingFrame.CanvasSize = UDim2.new(0, 0, 0, 180)
-        scrollingFrame.Parent = mainFrame
-
-        return gui, mainFrame, silentAimCircle, triggerBotCircle, 
-               triggerBotLabel, silentAimLabel, silentAimFOVLabel,
-               triggerBotFOVToggle, silentAimFOVToggle
-    end)
-    if not success then
-        warn("Erreur dans createGui : " .. tostring(result))
-        return nil
-    end
-    return result
-end
-
-local gui, mainFrame, silentAimCircle, triggerBotCircle, 
-    triggerBotLabel, silentAimLabel, silentAimFOVLabel,
-    triggerBotFOVToggle, silentAimFOVToggle = createGui()
-
-if not gui then
-    warn("Échec de la création du GUI")
+        silentAimFOVLabel.TextColor3 = Color3.fromRGB(255, 255, -warning("Échec de la création du GUI")
     return
 end
 
@@ -251,8 +222,8 @@ local function createSlider(labelText, settingKey, min, max, posY)
             label.Text = labelText .. ": " .. value
             silentAimFOVLabel.Text = "Silent Aim FOV: " .. value
             if settingKey == "SilentAimFOV" then
-                silentAimCircle.Radius = value
-                triggerBotCircle.Radius = value
+                silentAimFrame.Size = UDim2.new(0, value * 2, 0, value * 2)
+                triggerBotFrame.Size = UDim2.new(0, value * 2, 0, value * 2)
             end
         else
             slider.Text = tostring(Settings[settingKey])
@@ -401,7 +372,7 @@ local function resolveVelocity(object)
             end
         end
     end
-    previousPositions[player Purposes: To maintain a record of the player's previous position for velocity calculations.
+    previousPositions[player] = currentPosition
     previousTimes[player] = currentTime
 end
 
@@ -425,10 +396,11 @@ end)
 
 RS.RenderStepped:Connect(function()
     if isUnlocked then
-        silentAimCircle.Position = UIS:GetMouseLocation()
-        silentAimCircle.Visible = States.SilentAim and States.SilentAimFOVVisible
-        triggerBotCircle.Position = UIS:GetMouseLocation()
-        triggerBotCircle.Visible = States.TriggerBot and States.TriggerBotFOVVisible
+        local mousePos = UIS:GetMouseLocation()
+        silentAimFrame.Position = UDim2.new(0, mousePos.X - Settings.SilentAimFOV, 0, mousePos.Y - Settings.SilentAimFOV)
+        silentAimFrame.Visible = States.SilentAim and States.SilentAimFOVVisible
+        triggerBotFrame.Position = UDim2.new(0, mousePos.X - Settings.SilentAimFOV, 0, mousePos.Y - Settings.SilentAimFOV)
+        triggerBotFrame.Visible = States.TriggerBot and States.TriggerBotFOVVisible
         if States.SilentAim then
             silentTarget, silentHitbox = getClosestPlayer(Settings.SilentAimFOV)
         else
@@ -446,10 +418,14 @@ RS.RenderStepped:Connect(function()
 end)
 
 local function bulletHooker(target, hitbox)
-    if List[game.PlaceId] and target and target.Character and target.Character:FindFirstChild(hitbox) then
-        local part = target.Character[hitbox]
-        local targetPos = part.Position + (part.Velocity * Vector3.new(Settings.Prediction[1], Settings.Prediction[2], Settings.Prediction[3]))
+    if not List[game.PlaceId] or not target or not target.Character or not target.Character:FindFirstChild(hitbox) then return end
+    local part = target.Character[hitbox]
+    local targetPos = part.Position + (part.Velocity * Vector3.new(Settings.Prediction[1], Settings.Prediction[2], Settings.Prediction[3]))
+    local success, err = pcall(function()
         ReplicatedStorage[List[game.PlaceId][3]]:FireServer(List[game.PlaceId][2], targetPos)
+    end)
+    if not success then
+        warn("Erreur lors de bulletHooker : " .. tostring(err))
     end
 end
 
@@ -493,7 +469,7 @@ end
 LP.CharacterAdded:Connect(function(character)
     connectTool(character)
     if not LP.PlayerGui:FindFirstChild("AimAssistGui") then
-        gui, mainFrame, silentAimCircle, triggerBotCircle, 
+        gui, mainFrame, silentAimFrame, triggerBotFrame, 
         triggerBotLabel, silentAimLabel, silentAimFOVLabel,
         triggerBotFOVToggle, silentAimFOVToggle = createGui()
         if gui then
