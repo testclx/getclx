@@ -42,6 +42,7 @@ local States = {
 }
 local isUnlocked = true
 local silentTarget = nil
+local silentHitbox = nil
 local triggerTargets = {}
 local previousPositions = {}
 local previousTimes = {}
@@ -77,6 +78,16 @@ local List = {
     [9183932460] = {'Untitled Hood', 'UpdateMousePos', '.gg/untitledhood'},
     [14412355918] = {'Da Downhill', 'MOUSE', 'MAINEVENT'}
 }
+
+-- Vérifie si le PlaceId est supporté
+if not List[game.PlaceId] then
+    warn("Ce jeu (PlaceId: " .. game.PlaceId .. ") n'est pas supporté par ce script.")
+    return
+end
+
+local gui, mainFrame, silentAimFrame, triggerBotFrame, 
+      triggerBotLabel, silentAimLabel, silentAimFOVLabel,
+      triggerBotFOVToggle, silentAimFOVToggle, scrollingFrame
 
 local function createGui()
     local success, result = pcall(function()
@@ -190,7 +201,41 @@ local function createGui()
         silentAimFOVLabel.Position = UDim2.new(0, 5, 0, 65)
         silentAimFOVLabel.BackgroundTransparency = 1
         silentAimFOVLabel.Text = "Silent Aim FOV: " .. Settings.SilentAimFOV
-        silentAimFOVLabel.TextColor3 = Color3.fromRGB(255, 255, -warning("Échec de la création du GUI")
+        silentAimFOVLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+        silentAimFOVLabel.TextSize = 12
+        silentAimFOVLabel.Font = Enum.Font.Gotham
+        silentAimFOVLabel.TextXAlignment = Enum.TextXAlignment.Left
+        silentAimFOVLabel.Parent = mainFrame
+
+        local scrollingFrame = Instance.new("ScrollingFrame")
+        scrollingFrame.Size = UDim2.new(1, 0, 0, 150)
+        scrollingFrame.Position = UDim2.new(0, 0, 0, 90)
+        scrollingFrame.BackgroundTransparency = 1
+        scrollingFrame.ScrollBarThickness = 4
+        scrollingFrame.CanvasSize = UDim2.new(0, 0, 0, 200) -- Ajuste selon le contenu
+        scrollingFrame.Parent = mainFrame
+
+        return gui, mainFrame, silentAimFrame, triggerBotFrame, 
+               triggerBotLabel, silentAimLabel, silentAimFOVLabel,
+               triggerBotFOVToggle, silentAimFOVToggle, scrollingFrame
+    end)
+
+    if not success then
+        warn("Échec de la création du GUI : " .. tostring(result))
+        return nil
+    end
+
+    return result
+end
+
+-- Appelle createGui et stocke les résultats
+local result = createGui()
+if result then
+    gui, mainFrame, silentAimFrame, triggerBotFrame, 
+    triggerBotLabel, silentAimLabel, silentAimFOVLabel,
+    triggerBotFOVToggle, silentAimFOVToggle, scrollingFrame = unpack(result)
+else
+    warn("Échec de l'initialisation du GUI.")
     return
 end
 
@@ -203,7 +248,7 @@ local function createSlider(labelText, settingKey, min, max, posY)
     label.TextColor3 = Color3.fromRGB(180, 180, 180)
     label.TextSize = 12
     label.Font = Enum.Font.Gotham
-    label.Parent = mainFrame.ScrollingFrame
+    label.Parent = scrollingFrame
     local slider = Instance.new("TextBox")
     slider.Size = UDim2.new(0, 240, 0, 20)
     slider.Position = UDim2.new(0, 5, 0, posY + 20)
@@ -211,7 +256,7 @@ local function createSlider(labelText, settingKey, min, max, posY)
     slider.Text = tostring(Settings[settingKey])
     slider.TextColor3 = Color3.fromRGB(255, 255, 255)
     slider.TextSize = 12
-    slider.Parent = mainFrame.ScrollingFrame
+    slider.Parent = scrollingFrame
     local corner = Instance.new("UICorner")
     corner.CornerRadius = UDim.new(0, 4)
     corner.Parent = slider
@@ -240,7 +285,7 @@ local function createKeybind(labelText, settingKey, defaultKey, posY)
     label.TextColor3 = Color3.fromRGB(180, 180, 180)
     label.TextSize = 12
     label.Font = Enum.Font.Gotham
-    label.Parent = mainFrame.ScrollingFrame
+    label.Parent = scrollingFrame
     local input = Instance.new("TextButton")
     input.Size = UDim2.new(0, 240, 0, 20)
     input.Position = UDim2.new(0, 5, 0, posY + 20)
@@ -248,7 +293,7 @@ local function createKeybind(labelText, settingKey, defaultKey, posY)
     input.Text = tostring(defaultKey):match("KeyCode%.(.+)")
     input.TextColor3 = Color3.fromRGB(255, 255, 255)
     input.TextSize = 12
-    input.Parent = mainFrame.ScrollingFrame
+    input.Parent = scrollingFrame
     local corner = Instance.new("UICorner")
     corner.CornerRadius = UDim.new(0, 4)
     corner.Parent = input
@@ -266,6 +311,7 @@ local function createKeybind(labelText, settingKey, defaultKey, posY)
     end)
 end
 
+-- Ajoute les sliders et keybinds dans le ScrollingFrame
 createSlider("Silent FOV", "SilentAimFOV", 1.5, 1000, 5)
 createKeybind("Silent Aim Key", "ToggleSilentAim", Settings.Keybinds.ToggleSilentAim, 35)
 createKeybind("TriggerBot Key", "ToggleTriggerBot", Settings.Keybinds.ToggleTriggerBot, 65)
@@ -421,8 +467,17 @@ local function bulletHooker(target, hitbox)
     if not List[game.PlaceId] or not target or not target.Character or not target.Character:FindFirstChild(hitbox) then return end
     local part = target.Character[hitbox]
     local targetPos = part.Position + (part.Velocity * Vector3.new(Settings.Prediction[1], Settings.Prediction[2], Settings.Prediction[3]))
+    
+    -- Vérifie si le RemoteEvent existe
+    local remoteName = List[game.PlaceId][3]
+    local remote = ReplicatedStorage:FindFirstChild(remoteName)
+    if not remote then
+        warn("RemoteEvent '" .. remoteName .. "' n'existe pas dans ReplicatedStorage pour PlaceId " .. game.PlaceId)
+        return
+    end
+    
     local success, err = pcall(function()
-        ReplicatedStorage[List[game.PlaceId][3]]:FireServer(List[game.PlaceId][2], targetPos)
+        remote:FireServer(List[game.PlaceId][2], targetPos)
     end)
     if not success then
         warn("Erreur lors de bulletHooker : " .. tostring(err))
@@ -469,10 +524,11 @@ end
 LP.CharacterAdded:Connect(function(character)
     connectTool(character)
     if not LP.PlayerGui:FindFirstChild("AimAssistGui") then
-        gui, mainFrame, silentAimFrame, triggerBotFrame, 
-        triggerBotLabel, silentAimLabel, silentAimFOVLabel,
-        triggerBotFOVToggle, silentAimFOVToggle = createGui()
-        if gui then
+        local result = createGui()
+        if result then
+            gui, mainFrame, silentAimFrame, triggerBotFrame, 
+            triggerBotLabel, silentAimLabel, silentAimFOVLabel,
+            triggerBotFOVToggle, silentAimFOVToggle, scrollingFrame = unpack(result)
             createSlider("Silent FOV", "SilentAimFOV", 1.5, 1000, 5)
             createKeybind("Silent Aim Key", "ToggleSilentAim", Settings.Keybinds.ToggleSilentAim, 35)
             createKeybind("TriggerBot Key", "ToggleTriggerBot", Settings.Keybinds.ToggleTriggerBot, 65)
