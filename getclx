@@ -1,3 +1,9 @@
+if _G.AimAssistScriptLoaded then
+    warn("Script déjà chargé, arrêt de l'exécution.")
+    return
+end
+_G.AimAssistScriptLoaded = true
+
 local Players = game:GetService("Players")
 local LP
 local success, err = pcall(function()
@@ -212,7 +218,7 @@ local function createGui()
         scrollingFrame.Position = UDim2.new(0, 0, 0, 90)
         scrollingFrame.BackgroundTransparency = 1
         scrollingFrame.ScrollBarThickness = 4
-        scrollingFrame.CanvasSize = UDim2.new(0, 0, 0, 200) -- Ajuste selon le contenu
+        scrollingFrame.CanvasSize = UDim2.new(0, 0, 0, 200)
         scrollingFrame.Parent = mainFrame
 
         return gui, mainFrame, silentAimFrame, triggerBotFrame, 
@@ -228,7 +234,6 @@ local function createGui()
     return result
 end
 
--- Appelle createGui et stocke les résultats
 local result = createGui()
 if result then
     gui, mainFrame, silentAimFrame, triggerBotFrame, 
@@ -311,7 +316,6 @@ local function createKeybind(labelText, settingKey, defaultKey, posY)
     end)
 end
 
--- Ajoute les sliders et keybinds dans le ScrollingFrame
 createSlider("Silent FOV", "SilentAimFOV", 1.5, 1000, 5)
 createKeybind("Silent Aim Key", "ToggleSilentAim", Settings.Keybinds.ToggleSilentAim, 35)
 createKeybind("TriggerBot Key", "ToggleTriggerBot", Settings.Keybinds.ToggleTriggerBot, 65)
@@ -464,11 +468,12 @@ RS.RenderStepped:Connect(function()
 end)
 
 local function bulletHooker(target, hitbox)
-    if not List[game.PlaceId] or not target or not target.Character or not target.Character:FindFirstChild(hitbox) then return end
+    if not List[game.PlaceId] or not target or not target.Character or not target.Character:FindFirstChild(hitbox) then
+        return
+    end
     local part = target.Character[hitbox]
     local targetPos = part.Position + (part.Velocity * Vector3.new(Settings.Prediction[1], Settings.Prediction[2], Settings.Prediction[3]))
     
-    -- Vérifie si le RemoteEvent existe
     local remoteName = List[game.PlaceId][3]
     local remote = ReplicatedStorage:FindFirstChild(remoteName)
     if not remote then
