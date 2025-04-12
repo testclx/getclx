@@ -23,14 +23,14 @@ local Settings = {
         CloseMenu = Enum.KeyCode.M,
         ToggleSilentAim = Enum.KeyCode.V,
         ToggleTriggerBot = Enum.KeyCode.C,
-        ToggleFOVVisibility = Enum.KeyCode.N -- Nouvelle touche pour basculer la visibilité des FOV
+        ToggleFOVVisibility = Enum.KeyCode.N
     }
 }
 
 local States = {
     SilentAim = false,
     TriggerBot = false,
-    FOVVisible = true -- État pour la visibilité des cercles FOV
+    FOVVisible = true
 }
 local isUnlocked = true
 local silentTarget = nil
@@ -74,7 +74,7 @@ local function createGUI()
     gui.Name = "AimAssistGui"
     gui.Parent = LP:WaitForChild("PlayerGui")
     gui.IgnoreGuiInset = true
-    gui.ResetOnSpawn = false -- Empêche la réinitialisation du GUI au respawn
+    gui.ResetOnSpawn = false
 
     local silentAimCircle = Drawing.new("Circle")
     silentAimCircle.Thickness = 1.5
@@ -93,8 +93,8 @@ local function createGUI()
     triggerBotCircle.Filled = false
 
     local mainFrame = Instance.new("Frame")
-    mainFrame.Size = UDim2.new(0, 300, 0, 230)
-    mainFrame.Position = UDim2.new(0.5, -150, 0.5, -115)
+    mainFrame.Size = UDim2.new(0, 300, 0, 250) -- Légèrement agrandi pour le nouveau label
+    mainFrame.Position = UDim2.new(0.5, -150, 0.5, -125)
     mainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
     mainFrame.BorderSizePixel = 0
     mainFrame.ClipsDescendants = true
@@ -147,9 +147,20 @@ local function createGUI()
     silentAimLabel.TextXAlignment = Enum.TextXAlignment.Left
     silentAimLabel.Parent = mainFrame
 
+    local fovVisibilityLabel = Instance.new("TextLabel")
+    fovVisibilityLabel.Size = UDim2.new(1, 0, 0, 20)
+    fovVisibilityLabel.Position = UDim2.new(0, 5, 0, 65)
+    fovVisibilityLabel.BackgroundTransparency = 1
+    fovVisibilityLabel.Text = "FOV Visible: ON"
+    fovVisibilityLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+    fovVisibilityLabel.TextSize = 12
+    fovVisibilityLabel.Font = Enum.Font.Gotham
+    fovVisibilityLabel.TextXAlignment = Enum.TextXAlignment.Left
+    fovVisibilityLabel.Parent = mainFrame
+
     local silentAimFOVLabel = Instance.new("TextLabel")
     silentAimFOVLabel.Size = UDim2.new(1, 0, 0, 20)
-    silentAimFOVLabel.Position = UDim2.new(0, 5, 0, 65)
+    silentAimFOVLabel.Position = UDim2.new(0, 5, 0, 85)
     silentAimFOVLabel.BackgroundTransparency = 1
     silentAimFOVLabel.Text = "Silent Aim FOV: " .. Settings.SilentAimFOV
     silentAimFOVLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -160,11 +171,11 @@ local function createGUI()
 
     local scrollingFrame = Instance.new("ScrollingFrame")
     scrollingFrame.Size = UDim2.new(1, -10, 0, 130)
-    scrollingFrame.Position = UDim2.new(0, 5, 0, 85)
+    scrollingFrame.Position = UDim2.new(0, 5, 0, 105)
     scrollingFrame.BackgroundTransparency = 1
     scrollingFrame.ScrollBarThickness = 3
     scrollingFrame.ScrollBarImageColor3 = Color3.fromRGB(100, 100, 100)
-    scrollingFrame.CanvasSize = UDim2.new(0, 0, 0, 180)
+    scrollingFrame.CanvasSize = UDim2.new(0, 0, 0, 210) -- Ajusté pour plus d'espace
     scrollingFrame.Parent = mainFrame
 
     local function createSlider(labelText, settingKey, min, max, posY)
@@ -270,16 +281,29 @@ local function createGUI()
         end
     end)
 
-    return gui, silentAimCircle, triggerBotCircle, mainFrame, triggerBotLabel, silentAimLabel, silentAimFOVLabel
+    return gui, silentAimCircle, triggerBotCircle, mainFrame, triggerBotLabel, silentAimLabel, fovVisibilityLabel, silentAimFOVLabel
 end
 
 -- Initialisation du GUI
-local gui, silentAimCircle, triggerBotCircle, mainFrame, triggerBotLabel, silentAimLabel, silentAimFOVLabel = createGUI()
+local gui, silentAimCircle, triggerBotCircle, mainFrame, triggerBotLabel, silentAimLabel, fovVisibilityLabel, silentAimFOVLabel = createGUI()
+
+-- Nettoyage des anciens cercles Drawing avant de recréer
+local function cleanupDrawing()
+    if silentAimCircle then
+        silentAimCircle:Remove()
+        silentAimCircle = nil
+    end
+    if triggerBotCircle then
+        triggerBotCircle:Remove()
+        triggerBotCircle = nil
+    end
+end
 
 -- Réinitialiser le GUI après respawn
 LP.CharacterAdded:Connect(function()
+    cleanupDrawing() -- Nettoyer les anciens cercles
     gui:Destroy() -- Détruire l'ancien GUI
-    gui, silentAimCircle, triggerBotCircle, mainFrame, triggerBotLabel, silentAimLabel, silentAimFOVLabel = createGUI() -- Recréer le GUI
+    gui, silentAimCircle, triggerBotCircle, mainFrame, triggerBotLabel, silentAimLabel, fovVisibilityLabel, silentAimFOVLabel = createGUI() -- Recréer le GUI
     connectTool(LP.Character) -- Reconnecter les outils
 end)
 
@@ -361,14 +385,16 @@ RS.RenderStepped:Connect(function()
         end
         triggerBotLabel.Text = "TriggerBot: " .. (States.TriggerBot and "ON" or "OFF")
         silentAimLabel.Text = "Silent Aim: " .. (States.SilentAim and "ON" or "OFF")
+        fovVisibilityLabel.Text = "FOV Visible: " .. (States.FOVVisible and "ON" or "OFF")
     end
 end)
 
 local function bulletHooker(target, hitbox)
     if List[game.PlaceId] and target and target.Character and target.Character:FindFirstChild(hitbox) then
         local part = target.Character[hitbox]
-        local targetPos = part.Position + (part.Velocity * Vector3.new(Settings.Prediction[1], Settings.Prediction[2], Settings.Prediction[3]))
-        ReplicatedStorage[List[game.PlaceId][3]]:FireServer(List[game.PlaceId][2], targetPos)
+        local targetPos = part.Position + (part.Velocity * Vector3.new(unpack(Settings.Prediction)))
+        local args = {List[game.PlaceId][2], targetPos}
+        ReplicatedStorage:FindFirstChild(List[game.PlaceId][3]):FireServer(unpack(args))
     end
 end
 
@@ -400,7 +426,7 @@ local function connectTool(character)
         character.ChildAdded:Connect(function(child)
             if child:IsA("Tool") then
                 child.Activated:Connect(function()
-                    if States.SilentAim and silentTarget and silentHitbox then
+                    if States.SilentAim and silentTarget and silentHitbox and isVisible(silentTarget, silentHitbox) then
                         bulletHooker(silentTarget, silentHitbox)
                     end
                 end)
@@ -408,6 +434,9 @@ local function connectTool(character)
         end)
     end
 end
+
+LP.CharacterAdded:Connect(connectTool)
+if LP.Character then connectTool(LP.Character) end
 
 UIS.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 and States.TriggerBot then
