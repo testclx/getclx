@@ -1,7 +1,15 @@
-local LP = game.Players.LocalPlayer
-if not LP then
-    game.Players.PlayerAdded:Wait()
-    LP = game.Players.LocalPlayer
+local Players = game:GetService("Players")
+local LP
+local success, err = pcall(function()
+    LP = Players.LocalPlayer
+    if not LP then
+        Players.PlayerAdded:Wait()
+        LP = Players.LocalPlayer
+    end
+end)
+if not success then
+    warn("Erreur lors du chargement du LocalPlayer : " .. tostring(err))
+    return
 end
 
 local TS = game:GetService("TweenService")
@@ -9,7 +17,6 @@ local UIS = game:GetService("UserInputService")
 local RS = game:GetService("RunService")
 local Camera = workspace.CurrentCamera
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local Players = game:GetService("Players")
 
 local Settings = {
     SilentAimFOV = 4.5,
@@ -23,7 +30,8 @@ local Settings = {
         CloseMenu = Enum.KeyCode.M,
         ToggleSilentAim = Enum.KeyCode.V,
         ToggleTriggerBot = Enum.KeyCode.C
-    }
+    },
+    ResolverVelocityThreshold = 50
 }
 
 local States = {
@@ -35,6 +43,8 @@ local States = {
 local isUnlocked = true
 local silentTarget = nil
 local triggerTargets = {}
+local previousPositions = {}
+local previousTimes = {}
 
 local List = {
     [16469595315] = {'Del Hood Aim', 'UpdateMousePos', 'MainEvent'},
@@ -69,137 +79,149 @@ local List = {
 }
 
 local function createGui()
-    local gui = Instance.new("ScreenGui")
-    gui.Name = "AimAssistGui"
-    gui.Parent = LP:WaitForChild("PlayerGui")
-    gui.IgnoreGuiInset = true
-    gui.ResetOnSpawn = false
+    local success, result = pcall(function()
+        local gui = Instance.new("ScreenGui")
+        gui.Name = "AimAssistGui"
+        gui.Parent = LP:WaitForChild("PlayerGui")
+        gui.IgnoreGuiInset = true
+        gui.ResetOnSpawn = false
 
-    local silentAimCircle = Drawing.new("Circle")
-    silentAimCircle.Thickness = 1.5
-    silentAimCircle.NumSides = 100
-    silentAimCircle.Radius = Settings.SilentAimFOV
-    silentAimCircle.Visible = false
-    silentAimCircle.Color = Settings.SilentAimFOVColor
-    silentAimCircle.Filled = false
+        local silentAimCircle = Drawing.new("Circle")
+        silentAimCircle.Thickness = 1.5
+        silentAimCircle.NumSides = 100
+        silentAimCircle.Radius = Settings.SilentAimFOV
+        silentAimCircle.Visible = false
+        silentAimCircle.Color = Settings.SilentAimFOVColor
+        silentAimCircle.Filled = false
 
-    local triggerBotCircle = Drawing.new("Circle")
-    triggerBotCircle.Thickness = 1.5
-    triggerBotCircle.NumSides = 100
-    triggerBotCircle.Radius = Settings.SilentAimFOV
-    triggerBotCircle.Visible = false
-    triggerBotCircle.Color = Settings.TriggerBotFOVColor
-    triggerBotCircle.Filled = false
+        local triggerBotCircle = Drawing.new("Circle")
+        triggerBotCircle.Thickness = 1.5
+        triggerBotCircle.NumSides = 100
+        triggerBotCircle.Radius = Settings.SilentAimFOV
+        triggerBotCircle.Visible = false
+        triggerBotCircle.Color = Settings.TriggerBotFOVColor
+        triggerBotCircle.Filled = false
 
-    local mainFrame = Instance.new("Frame")
-    mainFrame.Size = UDim2.new(0, 300, 0, 250)
-    mainFrame.Position = UDim2.new(0.5, -150, 0.5, -125)
-    mainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-    mainFrame.BorderSizePixel = 0
-    mainFrame.ClipsDescendants = true
-    mainFrame.Parent = gui
+        local mainFrame = Instance.new("Frame")
+        mainFrame.Size = UDim2.new(0, 300, 0, 250)
+        mainFrame.Position = UDim2.new(0.5, -150, 0.5, -125)
+        mainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+        mainFrame.BorderSizePixel = 0
+        mainFrame.ClipsDescendants = true
+        mainFrame.Parent = gui
 
-    local mainCorner = Instance.new("UICorner")
-    mainCorner.CornerRadius = UDim.new(0, 8)
-    mainCorner.Parent = mainFrame
+        local mainCorner = Instance.new("UICorner")
+        mainCorner.CornerRadius = UDim.new(0, 8)
+        mainCorner.Parent = mainFrame
 
-    local mainShadow = Instance.new("ImageLabel")
-    mainShadow.Size = UDim2.new(1, 20, 1, 20)
-    mainShadow.Position = UDim2.new(0, -10, 0, -10)
-    mainShadow.BackgroundTransparency = 1
-    mainShadow.Image = "rbxassetid://6014261993"
-    mainShadow.ImageColor3 = Color3.fromRGB(0, 0, 0)
-    mainShadow.ImageTransparency = 0.7
-    mainShadow.ScaleType = Enum.ScaleType.Slice
-    mainShadow.SliceCenter = Rect.new(10, 10, 10, 10)
-    mainShadow.Parent = mainFrame
-    mainShadow.ZIndex = -1
+        local mainShadow = Instance.new("ImageLabel")
+        mainShadow.Size = UDim2.new(1, 20, 1, 20)
+        mainShadow.Position = UDim2.new(0, -10, 0, -10)
+        mainShadow.BackgroundTransparency = 1
+        mainShadow.Image = "rbxassetid://6014261993"
+        mainShadow.ImageColor3 = Color3.fromRGB(0, 0, 0)
+        mainShadow.ImageTransparency = 0.7
+        mainShadow.ScaleType = Enum.ScaleType.Slice
+        mainShadow.SliceCenter = Rect.new(10, 10, 10, 10)
+        mainShadow.Parent = mainFrame
+        mainShadow.ZIndex = -1
 
-    local titleLabel = Instance.new("TextLabel")
-    titleLabel.Size = UDim2.new(1, 0, 0, 20)
-    titleLabel.BackgroundTransparency = 1
-    titleLabel.Text = "clx"
-    titleLabel.TextColor3 = Color3.fromRGB(255, 50, 50)
-    titleLabel.TextSize = 14
-    titleLabel.Font = Enum.Font.GothamBold
-    titleLabel.Parent = mainFrame
+        local titleLabel = Instance.new("TextLabel")
+        titleLabel.Size = UDim2.new(1, 0, 0, 20)
+        titleLabel.BackgroundTransparency = 1
+        titleLabel.Text = "clx"
+        titleLabel.TextColor3 = Color3.fromRGB(255, 50, 50)
+        titleLabel.TextSize = 14
+        titleLabel.Font = Enum.Font.GothamBold
+        titleLabel.Parent = mainFrame
 
-    local triggerBotLabel = Instance.new("TextLabel")
-    triggerBotLabel.Size = UDim2.new(1, 0, 0, 20)
-    triggerBotLabel.Position = UDim2.new(0, 5, 0, 25)
-    triggerBotLabel.BackgroundTransparency = 1
-    triggerBotLabel.Text = "TriggerBot: OFF"
-    triggerBotLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-    triggerBotLabel.TextSize = 12
-    triggerBotLabel.Font = Enum.Font.Gotham
-    triggerBotLabel.TextXAlignment = Enum.TextXAlignment.Left
-    triggerBotLabel.Parent = mainFrame
+        local triggerBotLabel = Instance.new("TextLabel")
+        triggerBotLabel.Size = UDim2.new(1, 0, 0, 20)
+        triggerBotLabel.Position = UDim2.new(0, 5, 0, 25)
+        triggerBotLabel.BackgroundTransparency = 1
+        triggerBotLabel.Text = "TriggerBot: OFF"
+        triggerBotLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+        triggerBotLabel.TextSize = 12
+        triggerBotLabel.Font = Enum.Font.Gotham
+        triggerBotLabel.TextXAlignment = Enum.TextXAlignment.Left
+        triggerBotLabel.Parent = mainFrame
 
-    local triggerBotFOVToggle = Instance.new("TextButton")
-    triggerBotFOVToggle.Size = UDim2.new(0, 100, 0, 20)
-    triggerBotFOVToggle.Position = UDim2.new(0, 190, 0, 25)
-    triggerBotFOVToggle.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
-    triggerBotFOVToggle.Text = "FOV: OFF"
-    triggerBotFOVToggle.TextColor3 = Color3.fromRGB(255, 255, 255)
-    triggerBotFOVToggle.TextSize = 12
-    triggerBotFOVToggle.Font = Enum.Font.Gotham
-    triggerBotFOVToggle.Parent = mainFrame
-    local triggerBotFOVCorner = Instance.new("UICorner")
-    triggerBotFOVCorner.CornerRadius = UDim.new(0, 4)
-    triggerBotFOVCorner.Parent = triggerBotFOVToggle
+        local triggerBotFOVToggle = Instance.new("TextButton")
+        triggerBotFOVToggle.Size = UDim2.new(0, 100, 0, 20)
+        triggerBotFOVToggle.Position = UDim2.new(0, 190, 0, 25)
+        triggerBotFOVToggle.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+        triggerBotFOVToggle.Text = "FOV: OFF"
+        triggerBotFOVToggle.TextColor3 = Color3.fromRGB(255, 255, 255)
+        triggerBotFOVToggle.TextSize = 12
+        triggerBotFOVToggle.Font = Enum.Font.Gotham
+        triggerBotFOVToggle.Parent = mainFrame
+        local triggerBotFOVCorner = Instance.new("UICorner")
+        triggerBotFOVCorner.CornerRadius = UDim.new(0, 4)
+        triggerBotFOVCorner.Parent = triggerBotFOVToggle
 
-    local silentAimLabel = Instance.new("TextLabel")
-    silentAimLabel.Size = UDim2.new(1, 0, 0, 20)
-    silentAimLabel.Position = UDim2.new(0, 5, 0, 45)
-    silentAimLabel.BackgroundTransparency = 1
-    silentAimLabel.Text = "Silent Aim: OFF"
-    silentAimLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-    silentAimLabel.TextSize = 12
-    silentAimLabel.Font = Enum.Font.Gotham
-    silentAimLabel.TextXAlignment = Enum.TextXAlignment.Left
-    silentAimLabel.Parent = mainFrame
+        local silentAimLabel = Instance.new("TextLabel")
+        silentAimLabel.Size = UDim2.new(1, 0, 0, 20)
+        silentAimLabel.Position = UDim2.new(0, 5, 0, 45)
+        silentAimLabel.BackgroundTransparency = 1
+        silentAimLabel.Text = "Silent Aim: OFF"
+        silentAimLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+        silentAimLabel.TextSize = 12
+        silentAimLabel.Font = Enum.Font.Gotham
+        silentAimLabel.TextXAlignment = Enum.TextXAlignment.Left
+        silentAimLabel.Parent = mainFrame
 
-    local silentAimFOVToggle = Instance.new("TextButton")
-    silentAimFOVToggle.Size = UDim2.new(0, 100, 0, 20)
-    silentAimFOVToggle.Position = UDim2.new(0, 190, 0, 45)
-    silentAimFOVToggle.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
-    silentAimFOVToggle.Text = "FOV: OFF"
-    silentAimFOVToggle.TextColor3 = Color3.fromRGB(255, 255, 255)
-    silentAimFOVToggle.TextSize = 12
-    silentAimFOVToggle.Font = Enum.Font.Gotham
-    silentAimFOVToggle.Parent = mainFrame
-    local silentAimFOVCorner = Instance.new("UICorner")
-    silentAimFOVCorner.CornerRadius = UDim.new(0, 4)
-    silentAimFOVCorner.Parent = silentAimFOVToggle
+        local silentAimFOVToggle = Instance.new("TextButton")
+        silentAimFOVToggle.Size = UDim2.new(0, 100, 0, 20)
+        silentAimFOVToggle.Position = UDim2.new(0, 190, 0, 45)
+        silentAimFOVToggle.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+        silentAimFOVToggle.Text = "FOV: OFF"
+        silentAimFOVToggle.TextColor3 = Color3.fromRGB(255, 255, 255)
+        silentAimFOVToggle.TextSize = 12
+        silentAimFOVToggle.Font = Enum.Font.Gotham
+        silentAimFOVToggle.Parent = mainFrame
+        local silentAimFOVCorner = Instance.new("UICorner")
+        silentAimFOVCorner.CornerRadius = UDim.new(0, 4)
+        silentAimFOVCorner.Parent = silentAimFOVToggle
 
-    local silentAimFOVLabel = Instance.new("TextLabel")
-    silentAimFOVLabel.Size = UDim2.new(1, 0, 0, 20)
-    silentAimFOVLabel.Position = UDim2.new(0, 5, 0, 65)
-    silentAimFOVLabel.BackgroundTransparency = 1
-    silentAimFOVLabel.Text = "Silent Aim FOV: " .. Settings.SilentAimFOV
-    silentAimFOVLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-    silentAimFOVLabel.TextSize = 12
-    silentAimFOVLabel.Font = Enum.Font.Gotham
-    silentAimFOVLabel.TextXAlignment = Enum.TextXAlignment.Left
-    silentAimFOVLabel.Parent = mainFrame
+        local silentAimFOVLabel = Instance.new("TextLabel")
+        silentAimFOVLabel.Size = UDim2.new(1, 0, 0, 20)
+        silentAimFOVLabel.Position = UDim2.new(0, 5, 0, 65)
+        silentAimFOVLabel.BackgroundTransparency = 1
+        silentAimFOVLabel.Text = "Silent Aim FOV: " .. Settings.SilentAimFOV
+        silentAimFOVLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+        silentAimFOVLabel.TextSize = 12
+        silentAimFOVLabel.Font = Enum.Font.Gotham
+        silentAimFOVLabel.TextXAlignment = Enum.TextXAlignment.Left
+        silentAimFOVLabel.Parent = mainFrame
 
-    local scrollingFrame = Instance.new("ScrollingFrame")
-    scrollingFrame.Size = UDim2.new(1, -10, 0, 150)
-    scrollingFrame.Position = UDim2.new(0, 5, 0, 85)
-    scrollingFrame.BackgroundTransparency = 1
-    scrollingFrame.ScrollBarThickness = 3
-    scrollingFrame.ScrollBarImageColor3 = Color3.fromRGB(100, 100, 100)
-    scrollingFrame.CanvasSize = UDim2.new(0, 0, 0, 180)
-    scrollingFrame.Parent = mainFrame
+        local scrollingFrame = Instance.new("ScrollingFrame")
+        scrollingFrame.Size = UDim2.new(1, -10, 0, 150)
+        scrollingFrame.Position = UDim2.new(0, 5, 0, 85)
+        scrollingFrame.BackgroundTransparency = 1
+        scrollingFrame.ScrollBarThickness = 3
+        scrollingFrame.ScrollBarImageColor3 = Color3.fromRGB(100, 100, 100)
+        scrollingFrame.CanvasSize = UDim2.new(0, 0, 0, 180)
+        scrollingFrame.Parent = mainFrame
 
-    return gui, mainFrame, silentAimCircle, triggerBotCircle, 
-           triggerBotLabel, silentAimLabel, silentAimFOVLabel,
-           triggerBotFOVToggle, silentAimFOVToggle
+        return gui, mainFrame, silentAimCircle, triggerBotCircle, 
+               triggerBotLabel, silentAimLabel, silentAimFOVLabel,
+               triggerBotFOVToggle, silentAimFOVToggle
+    end)
+    if not success then
+        warn("Erreur dans createGui : " .. tostring(result))
+        return nil
+    end
+    return result
 end
 
 local gui, mainFrame, silentAimCircle, triggerBotCircle, 
     triggerBotLabel, silentAimLabel, silentAimFOVLabel,
     triggerBotFOVToggle, silentAimFOVToggle = createGui()
+
+if not gui then
+    warn("Échec de la création du GUI")
+    return
+end
 
 local function createSlider(labelText, settingKey, min, max, posY)
     local label = Instance.new("TextLabel")
@@ -362,6 +384,35 @@ local function getClosestPlayer(fov)
     return target, closestHitbox
 end
 
+local function resolveVelocity(object)
+    local player = Players:GetPlayerFromCharacter(object.Parent)
+    if not player then return end
+    local currentPosition = object.Position
+    local currentTime = tick()
+    local prevPos = previousPositions[player] or currentPosition
+    local prevTime = previousTimes[player] or currentTime
+    if prevPos and prevTime then
+        local deltaTime = currentTime - prevTime
+        if deltaTime > 0 then
+            local velocity = (currentPosition - prevPos) / deltaTime
+            if velocity.Magnitude > Settings.ResolverVelocityThreshold then
+                object.Velocity = Vector3.new(velocity.X, 0, velocity.Z)
+                object.AssemblyLinearVelocity = Vector3.new(velocity.X, 0, velocity.Z)
+            end
+        end
+    end
+    previousPositions[player Purposes: To maintain a record of the player's previous position for velocity calculations.
+    previousTimes[player] = currentTime
+end
+
+RS.Heartbeat:Connect(function()
+    for _, player in pairs(Players:GetPlayers()) do
+        if player ~= LP and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+            resolveVelocity(player.Character.HumanoidRootPart)
+        end
+    end
+end)
+
 triggerBotFOVToggle.MouseButton1Click:Connect(function()
     States.TriggerBotFOVVisible = not States.TriggerBotFOVVisible
     triggerBotFOVToggle.Text = "FOV: " .. (States.TriggerBotFOVVisible and "ON" or "OFF")
@@ -445,11 +496,14 @@ LP.CharacterAdded:Connect(function(character)
         gui, mainFrame, silentAimCircle, triggerBotCircle, 
         triggerBotLabel, silentAimLabel, silentAimFOVLabel,
         triggerBotFOVToggle, silentAimFOVToggle = createGui()
-        
-        createSlider("Silent FOV", "SilentAimFOV", 1.5, 1000, 5)
-        createKeybind("Silent Aim Key", "ToggleSilentAim", Settings.Keybinds.ToggleSilentAim, 35)
-        createKeybind("TriggerBot Key", "ToggleTriggerBot", Settings.Keybinds.ToggleTriggerBot, 65)
-        createKeybind("Close Menu Key", "CloseMenu", Settings.Keybinds.CloseMenu, 95)
+        if gui then
+            createSlider("Silent FOV", "SilentAimFOV", 1.5, 1000, 5)
+            createKeybind("Silent Aim Key", "ToggleSilentAim", Settings.Keybinds.ToggleSilentAim, 35)
+            createKeybind("TriggerBot Key", "ToggleTriggerBot", Settings.Keybinds.ToggleTriggerBot, 65)
+            createKeybind("Close Menu Key", "CloseMenu", Settings.Keybinds.CloseMenu, 95)
+        else
+            warn("Échec de la recréation du GUI après respawn")
+        end
     end
 end)
 
