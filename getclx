@@ -9,7 +9,6 @@ local RS = game:GetService("RunService")
 local Camera = workspace.CurrentCamera
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Players = game:GetService("Players")
-local Stats = game:GetService("Stats")
 
 local Settings = {
     SilentAimFOV = 50,
@@ -18,7 +17,7 @@ local Settings = {
     TriggerBotFOV = 300,
     TriggerBotFOVColor = Color3.fromRGB(0, 0, 255),
     Keybinds = {
-        CloseMenu = Enum.KeyCode.M,
+        CloseMenu = Enum.KeyCode.G, -- Changé à G
         ToggleSilentAim = Enum.KeyCode.V,
         ToggleTriggerBot = Enum.KeyCode.C,
         ToggleFOVVisibility = Enum.KeyCode.N
@@ -30,7 +29,6 @@ local States = {
     TriggerBot = false,
     FOVVisible = true
 }
-local isUnlocked = true
 local silentTarget = nil
 local silentHitbox = nil
 local triggerTargets = {}
@@ -44,6 +42,7 @@ local fovVisibilityLabel = nil
 local silentAimFOVLabel = nil
 
 local List = {
+    [2788229376] = {'Da Hood', 'UpdateMousePosI', 'MainEvent'},
     [16469595315] = {'Del Hood Aim', 'UpdateMousePos', 'MainEvent'},
     [17319408836] = {'OG Da Hood', 'UpdateMousePos', 'MainEvent'},
     [14975320521] = {'Ar Hood', 'UpdateMousePos', 'MainEvent'},
@@ -64,7 +63,6 @@ local List = {
     [11867820563] = {'Dae Hood', 'UpdateMousePos', 'MainEvent'},
     [17109142105] = {'Da Battles', 'MoonUpdateMousePos', 'MainEvent'},
     [15186202290] = {'Da Strike', 'MOUSE', 'MAINEVENT'},
-    [2788229376] = {'Da Hood', 'UpdateMousePosI', 'MainEvent'},
     [16033173781] = {'Da Hood Macro', 'UpdateMousePosI', 'MainEvent'},
     [7213786345] = {'Da Hood VC', 'UpdateMousePosI', 'MainEvent'},
     [9825515356] = {'Hood Customs', 'MousePosUpdate', 'MainEvent'},
@@ -75,9 +73,8 @@ local List = {
     [14412355918] = {'Da Downhill', 'MOUSE', 'MAINEVENT'}
 }
 
--- Fonction pour créer le GUI
 local function createGUI()
-    print("Début de createGUI") -- Débogage
+    print("Début createGUI")
     for _, existingGui in pairs(LP.PlayerGui:GetChildren()) do
         if existingGui.Name == "CLX" then
             existingGui:Destroy()
@@ -89,7 +86,7 @@ local function createGUI()
     gui.Parent = LP.PlayerGui
     gui.IgnoreGuiInset = true
     gui.ResetOnSpawn = false
-    print("ScreenGui CLX créé") -- Débogage
+    print("ScreenGui CLX créé")
 
     silentAimCircle = Drawing.new("Circle")
     silentAimCircle.Thickness = 2
@@ -106,7 +103,7 @@ local function createGUI()
     triggerBotCircle.Visible = States.FOVVisible and States.TriggerBot
     triggerBotCircle.Color = Settings.TriggerBotFOVColor
     triggerBotCircle.Filled = false
-    print("Cercles Drawing créés") -- Débogage
+    print("Cercles Drawing créés")
 
     mainFrame = Instance.new("Frame")
     mainFrame.Size = UDim2.new(0, 300, 0, 250)
@@ -116,7 +113,7 @@ local function createGUI()
     mainFrame.ClipsDescendants = true
     mainFrame.Parent = gui
     mainFrame.Visible = true
-    print("mainFrame créé") -- Débogage
+    print("mainFrame créé")
 
     local mainCorner = Instance.new("UICorner")
     mainCorner.CornerRadius = UDim.new(0, 8)
@@ -138,7 +135,7 @@ local function createGUI()
     titleLabel.Size = UDim2.new(1, 0, 0, 20)
     titleLabel.BackgroundTransparency = 1
     titleLabel.Text = "CLX"
-    titleLabel.TextColor3 = Color3.fromRGB(255, 20, 147) -- Rouge néon
+    titleLabel.TextColor3 = Color3.fromRGB(255, 20, 147)
     titleLabel.TextSize = 14
     titleLabel.Font = Enum.Font.GothamBold
     titleLabel.Parent = mainFrame
@@ -186,7 +183,7 @@ local function createGUI()
     silentAimFOVLabel.Font = Enum.Font.Gotham
     silentAimFOVLabel.TextXAlignment = Enum.TextXAlignment.Left
     silentAimFOVLabel.Parent = mainFrame
-    print("Labels créés") -- Débogage
+    print("Labels créés")
 
     local scrollingFrame = Instance.new("ScrollingFrame")
     scrollingFrame.Size = UDim2.new(1, -10, 0, 130)
@@ -196,7 +193,7 @@ local function createGUI()
     scrollingFrame.ScrollBarImageColor3 = Color3.fromRGB(100, 100, 100)
     scrollingFrame.CanvasSize = UDim2.new(0, 0, 0, 210)
     scrollingFrame.Parent = mainFrame
-    print("ScrollingFrame créé") -- Débogage
+    print("ScrollingFrame créé")
 
     local function createSlider(labelText, settingKey, min, max, posY)
         local label = Instance.new("TextLabel")
@@ -275,7 +272,7 @@ local function createGUI()
     createKeybind("TriggerBot Key", "ToggleTriggerBot", Settings.Keybinds.ToggleTriggerBot, 95)
     createKeybind("Close Menu Key", "CloseMenu", Settings.Keybinds.CloseMenu, 125)
     createKeybind("Toggle FOV Visibility", "ToggleFOVVisibility", Settings.Keybinds.ToggleFOVVisibility, 155)
-    print("Sliders et keybinds créés") -- Débogage
+    print("Sliders et keybinds créés")
 
     local dragging = false
     local dragStart = nil
@@ -302,21 +299,18 @@ local function createGUI()
         end
     end)
 
-    print("Fin de createGUI") -- Débogage
+    print("Fin createGUI")
     return gui, silentAimCircle, triggerBotCircle, mainFrame, triggerBotLabel, silentAimLabel, fovVisibilityLabel, silentAimFOVLabel
 end
 
--- Vérifier PlayerGui avant l'initialisation
 while not LP.PlayerGui do
     wait()
 end
-print("PlayerGui prêt, initialisation GUI") -- Débogage
+print("PlayerGui prêt")
 
--- Initialisation du GUI au démarrage
 gui, silentAimCircle, triggerBotCircle, mainFrame, triggerBotLabel, silentAimLabel, fovVisibilityLabel, silentAimFOVLabel = createGUI()
-print("GUI initialisé") -- Débogage
+print("GUI initialisé")
 
--- Nettoyage des anciens cercles Drawing
 local function cleanupDrawing()
     if silentAimCircle then
         silentAimCircle:Remove()
@@ -328,9 +322,8 @@ local function cleanupDrawing()
     end
 end
 
--- Gestion du respawn : nettoyer sans créer le GUI
 LP.CharacterAdded:Connect(function(character)
-    print("Respawn détecté, nettoyage GUI") -- Débogage
+    print("Respawn, nettoyage GUI")
     cleanupDrawing()
     if gui then
         gui:Destroy()
@@ -345,24 +338,22 @@ LP.CharacterAdded:Connect(function(character)
 end)
 
 local function toggleMenu()
-    print("toggleMenu appelé") -- Débogage
+    print("toggleMenu appelé")
     if not gui then
         gui, silentAimCircle, triggerBotCircle, mainFrame, triggerBotLabel, silentAimLabel, fovVisibilityLabel, silentAimFOVLabel = createGUI()
-        print("Nouveau GUI créé via toggleMenu") -- Débogage
+        print("Nouveau GUI créé")
     elseif mainFrame then
         mainFrame.Visible = not mainFrame.Visible
-        print("Visibilité togglée : " .. tostring(mainFrame.Visible)) -- Débogage
+        print("Visibilité : " .. tostring(mainFrame.Visible))
     end
 end
 
--- Fonction pour obtenir la position cible
 local function getTargetPosition(part)
     if not part then return nil end
     local targetPos = part.Position + (part.Velocity * Settings.Prediction)
     return targetPos
 end
 
--- Fonction pour obtenir le joueur le plus proche
 local function getClosestPlayer(fov)
     local target = nil
     local closestPart = nil
@@ -392,7 +383,6 @@ local function getClosestPlayer(fov)
     return target, closestPart
 end
 
--- Fonction pour obtenir tous les joueurs dans le FOV (TriggerBot)
 local function getAllPlayersInFOV(fov)
     local targets = {}
     local mousePos = UIS:GetMouseLocation()
@@ -414,41 +404,37 @@ local function getAllPlayersInFOV(fov)
     return targets
 end
 
--- Mise à jour des cercles et des cibles
 RS.RenderStepped:Connect(function()
-    if isUnlocked then
-        if silentAimCircle then
-            silentAimCircle.Position = UIS:GetMouseLocation()
-            silentAimCircle.Visible = States.FOVVisible and States.SilentAim
-        end
-        if triggerBotCircle then
-            triggerBotCircle.Position = UIS:GetMouseLocation()
-            triggerBotCircle.Visible = States.FOVVisible and States.TriggerBot
-        end
-        if States.SilentAim then
-            silentTarget, silentHitbox = getClosestPlayer(Settings.SilentAimFOV)
-        else
-            silentTarget = nil
-            silentHitbox = nil
-        end
-        if States.TriggerBot then
-            triggerTargets = getAllPlayersInFOV(Settings.TriggerBotFOV)
-        else
-            triggerTargets = {}
-        end
-        if triggerBotLabel then
-            triggerBotLabel.Text = "TriggerBot: " .. (States.TriggerBot and "ON" or "OFF")
-        end
-        if silentAimLabel then
-            silentAimLabel.Text = "Silent Aim: " .. (States.SilentAim and "ON" or "OFF")
-        end
-        if fovVisibilityLabel then
-            fovVisibilityLabel.Text = "FOV Visible: " .. (States.FOVVisible and "ON" or "OFF")
-        end
+    if silentAimCircle then
+        silentAimCircle.Position = UIS:GetMouseLocation()
+        silentAimCircle.Visible = States.FOVVisible and States.SilentAim
+    end
+    if triggerBotCircle then
+        triggerBotCircle.Position = UIS:GetMouseLocation()
+        triggerBotCircle.Visible = States.FOVVisible and States.TriggerBot
+    end
+    if States.SilentAim then
+        silentTarget, silentHitbox = getClosestPlayer(Settings.SilentAimFOV)
+    else
+        silentTarget = nil
+        silentHitbox = nil
+    end
+    if States.TriggerBot then
+        triggerTargets = getAllPlayersInFOV(Settings.TriggerBotFOV)
+    else
+        triggerTargets = {}
+    end
+    if triggerBotLabel then
+        triggerBotLabel.Text = "TriggerBot: " .. (States.TriggerBot and "ON" or "OFF")
+    end
+    if silentAimLabel then
+        silentAimLabel.Text = "Silent Aim: " .. (States.SilentAim and "ON" or "OFF")
+    end
+    if fovVisibilityLabel then
+        fovVisibilityLabel.Text = "FOV Visible: " .. (States.FOVVisible and "ON" or "OFF")
     end
 end)
 
--- Fonction pour tirer (Silent Aim)
 local function bulletHooker(target, part)
     if List[game.PlaceId] and target and target.Character and part then
         local targetPos = getTargetPosition(part)
