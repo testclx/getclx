@@ -1,4 +1,3 @@
-local LP = game.Players.LocalPlayer
 if not LP then
     game.Players.PlayerAdded:Wait()
     LP = game.Players.LocalPlayer
@@ -10,23 +9,39 @@ local RS = game:GetService("RunService")
 local Camera = workspace.CurrentCamera
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Players = game:GetService("Players")
-local Mouse = LP:GetMouse()
+local Stats = game:GetService("Stats")
 
-local configs = {
-    main = {
-        SilentAimEnabled = false,
-        TriggerBotEnabled = false,
-        SilentAimKey = "v",
-        TriggerBotKey = "c",
-        SilentAimPrediction = 0.01125,
-        TriggerBotPrediction = 0.01125,
-        SilentAimFOV = 50,
-        FOVVisible = false,
-        Notifications = false,
-        GuiKey = "M",
-        ResolverVelocity = 50
+local Settings = {
+    SilentAimFOV = 50,
+    SilentAimFOVColor = Color3.fromRGB(255, 0, 0),
+    Prediction = 0.12,
+    TriggerBotFOV = 300,
+    TriggerBotFOVColor = Color3.fromRGB(0, 0, 255),
+    Keybinds = {
+        CloseMenu = Enum.KeyCode.M,
+        ToggleSilentAim = Enum.KeyCode.V,
+        ToggleTriggerBot = Enum.KeyCode.C,
+        ToggleFOVVisibility = Enum.KeyCode.N
     }
 }
+
+local States = {
+    SilentAim = false,
+    TriggerBot = false,
+    FOVVisible = true
+}
+local isUnlocked = true
+local silentTarget = nil
+local silentHitbox = nil
+local triggerTargets = {}
+local gui = nil
+local silentAimCircle = nil
+local triggerBotCircle = nil
+local mainFrame = nil
+local triggerBotLabel = nil
+local silentAimLabel = nil
+local fovVisibilityLabel = nil
+local silentAimFOVLabel = nil
 
 local List = {
     [16469595315] = {'Del Hood Aim', 'UpdateMousePos', 'MainEvent'},
@@ -60,162 +75,207 @@ local List = {
     [14412355918] = {'Da Downhill', 'MOUSE', 'MAINEVENT'}
 }
 
-local gui, silentAimCircle = nil, nil
+-- Fonction pour créer le GUI
 local function createGUI()
+    print("Début de createGUI") -- Débogage
+    for _, existingGui in pairs(LP.PlayerGui:GetChildren()) do
+        if existingGui.Name == "CLX" then
+            existingGui:Destroy()
+        end
+    end
+
     gui = Instance.new("ScreenGui")
-    gui.Name = "BlatantAimGui"
-    gui.Parent = LP:WaitForChild("PlayerGui")
+    gui.Name = "CLX"
+    gui.Parent = LP.PlayerGui
     gui.IgnoreGuiInset = true
     gui.ResetOnSpawn = false
-    gui.Enabled = true -- Forcer le GUI à s’afficher par défaut
-
-    local mainFrame = Instance.new("Frame")
-    mainFrame.Size = UDim2.new(0, 200, 0, 260)
-    mainFrame.Position = UDim2.new(0.5, -100, 0.5, -130)
-    mainFrame.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-    mainFrame.BorderSizePixel = 0
-    mainFrame.Parent = gui
-
-    local titleLabel = Instance.new("TextLabel")
-    titleLabel.Size = UDim2.new(1, 0, 0, 30)
-    titleLabel.BackgroundTransparency = 1
-    titleLabel.Text = "Blatant Aim"
-    titleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-    titleLabel.TextSize = 16
-    titleLabel.Font = Enum.Font.SourceSansBold
-    titleLabel.Parent = mainFrame
-
-    local silentAimButton = Instance.new("TextButton")
-    silentAimButton.Size = UDim2.new(0.9, 0, 0, 30)
-    silentAimButton.Position = UDim2.new(0.05, 0, 0, 40)
-    silentAimButton.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
-    silentAimButton.Text = "Silent Aim: OFF"
-    silentAimButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-    silentAimButton.TextSize = 14
-    silentAimButton.Parent = mainFrame
-    silentAimButton.MouseButton1Click:Connect(function()
-        configs.main.SilentAimEnabled = not configs.main.SilentAimEnabled
-        silentAimButton.Text = "Silent Aim: " .. (configs.main.SilentAimEnabled and "ON" or "OFF")
-    end)
-
-    local triggerBotButton = Instance.new("TextButton")
-    triggerBotButton.Size = UDim2.new(0.9, 0, 0, 30)
-    triggerBotButton.Position = UDim2.new(0.05, 0, 0, 80)
-    triggerBotButton.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
-    triggerBotButton.Text = "TriggerBot: OFF"
-    triggerBotButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-    triggerBotButton.TextSize = 14
-    triggerBotButton.Parent = mainFrame
-    triggerBotButton.MouseButton1Click:Connect(function()
-        configs.main.TriggerBotEnabled = not configs.main.TriggerBotEnabled
-        triggerBotButton.Text = "TriggerBot: " .. (configs.main.TriggerBotEnabled and "ON" or "OFF")
-    end)
-
-    local fovLabel = Instance.new("TextLabel")
-    fovLabel.Size = UDim2.new(0.9, 0, 0, 20)
-    fovLabel.Position = UDim2.new(0.05, 0, 0, 120)
-    fovLabel.BackgroundTransparency = 1
-    fovLabel.Text = "FOV: " .. configs.main.SilentAimFOV
-    fovLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-    fovLabel.TextSize = 14
-    fovLabel.Parent = mainFrame
-
-    local fovSlider = Instance.new("TextBox")
-    fovSlider.Size = UDim2.new(0.9, 0, 0, 20)
-    fovSlider.Position = UDim2.new(0.05, 0, 0, 140)
-    fovSlider.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
-    fovSlider.Text = tostring(configs.main.SilentAimFOV)
-    fovSlider.TextColor3 = Color3.fromRGB(255, 255, 255)
-    fovSlider.TextSize = 14
-    fovSlider.Parent = mainFrame
-    fovSlider.FocusLost:Connect(function()
-        local value = tonumber(fovSlider.Text)
-        if value and value >= 1 and value <= 500 then
-            configs.main.SilentAimFOV = value
-            fovLabel.Text = "FOV: " .. value
-            if silentAimCircle then silentAimCircle.Radius = value end
-        else
-            fovSlider.Text = tostring(configs.main.SilentAimFOV)
-        end
-    end)
-
-    local fovVisibleButton = Instance.new("TextButton")
-    fovVisibleButton.Size = UDim2.new(0.9, 0, 0, 20)
-    fovVisibleButton.Position = UDim2.new(0.05, 0, 0, 170)
-    fovVisibleButton.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
-    fovVisibleButton.Text = "FOV Visible: OFF"
-    fovVisibleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-    fovVisibleButton.TextSize = 14
-    fovVisibleButton.Parent = mainFrame
-    fovVisibleButton.MouseButton1Click:Connect(function()
-        configs.main.FOVVisible = not configs.main.FOVVisible
-        fovVisibleButton.Text = "FOV Visible: " .. (configs.main.FOVVisible and "ON" or "OFF")
-        if silentAimCircle then
-            silentAimCircle.Visible = configs.main.FOVVisible
-        end
-    end)
-
-    local silentPredictionLabel = Instance.new("TextLabel")
-    silentPredictionLabel.Size = UDim2.new(0.9, 0, 0, 20)
-    silentPredictionLabel.Position = UDim2.new(0.05, 0, 0, 200)
-    silentPredictionLabel.BackgroundTransparency = 1
-    silentPredictionLabel.Text = "Silent Prediction: " .. configs.main.SilentAimPrediction
-    silentPredictionLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-    silentPredictionLabel.TextSize = 14
-    silentPredictionLabel.Parent = mainFrame
-
-    local silentPredictionSlider = Instance.new("TextBox")
-    silentPredictionSlider.Size = UDim2.new(0.9, 0, 0, 20)
-    silentPredictionSlider.Position = UDim2.new(0.05, 0, 0, 220)
-    silentPredictionSlider.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
-    silentPredictionSlider.Text = tostring(configs.main.SilentAimPrediction)
-    silentPredictionSlider.TextColor3 = Color3.fromRGB(255, 255, 255)
-    silentPredictionSlider.TextSize = 14
-    silentPredictionSlider.Parent = mainFrame
-    silentPredictionSlider.FocusLost:Connect(function()
-        local value = tonumber(silentPredictionSlider.Text)
-        if value and value >= 0 and value <= 1 then
-            configs.main.SilentAimPrediction = value
-            silentPredictionLabel.Text = "Silent Prediction: " .. value
-        else
-            silentPredictionSlider.Text = tostring(configs.main.SilentAimPrediction)
-        end
-    end)
-
-    local triggerPredictionLabel = Instance.new("TextLabel")
-    triggerPredictionLabel.Size = UDim2.new(0.9, 0, 0, 20)
-    triggerPredictionLabel.Position = UDim2.new(0.05, 0, 0, 250)
-    triggerPredictionLabel.BackgroundTransparency = 1
-    triggerPredictionLabel.Text = "Trigger Prediction: " .. configs.main.TriggerBotPrediction
-    triggerPredictionLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-    triggerPredictionLabel.TextSize = 14
-    triggerPredictionLabel.Parent = mainFrame
-
-    local triggerPredictionSlider = Instance.new("TextBox")
-    triggerPredictionSlider.Size = UDim2.new(0.9, 0, 0, 20)
-    triggerPredictionSlider.Position = UDim2.new(0.05, 0, 0, 270)
-    triggerPredictionSlider.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
-    triggerPredictionSlider.Text = tostring(configs.main.TriggerBotPrediction)
-    triggerPredictionSlider.TextColor3 = Color3.fromRGB(255, 255, 255)
-    triggerPredictionSlider.TextSize = 14
-    triggerPredictionSlider.Parent = mainFrame
-    triggerPredictionSlider.FocusLost:Connect(function()
-        local value = tonumber(triggerPredictionSlider.Text)
-        if value and value >= 0 and value <= 1 then
-            configs.main.TriggerBotPrediction = value
-            triggerPredictionLabel.Text = "Trigger Prediction: " .. value
-        else
-            triggerPredictionSlider.Text = tostring(configs.main.TriggerBotPrediction)
-        end
-    end)
+    print("ScreenGui CLX créé") -- Débogage
 
     silentAimCircle = Drawing.new("Circle")
     silentAimCircle.Thickness = 2
     silentAimCircle.NumSides = 100
-    silentAimCircle.Radius = configs.main.SilentAimFOV
-    silentAimCircle.Visible = configs.main.FOVVisible
-    silentAimCircle.Color = Color3.fromRGB(255, 0, 0)
+    silentAimCircle.Radius = Settings.SilentAimFOV
+    silentAimCircle.Visible = States.FOVVisible and States.SilentAim
+    silentAimCircle.Color = Settings.SilentAimFOVColor
     silentAimCircle.Filled = false
+
+    triggerBotCircle = Drawing.new("Circle")
+    triggerBotCircle.Thickness = 2
+    triggerBotCircle.NumSides = 100
+    triggerBotCircle.Radius = Settings.TriggerBotFOV
+    triggerBotCircle.Visible = States.FOVVisible and States.TriggerBot
+    triggerBotCircle.Color = Settings.TriggerBotFOVColor
+    triggerBotCircle.Filled = false
+    print("Cercles Drawing créés") -- Débogage
+
+    mainFrame = Instance.new("Frame")
+    mainFrame.Size = UDim2.new(0, 300, 0, 250)
+    mainFrame.Position = UDim2.new(0.5, -150, 0.5, -125)
+    mainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+    mainFrame.BorderSizePixel = 0
+    mainFrame.ClipsDescendants = true
+    mainFrame.Parent = gui
+    mainFrame.Visible = true
+    print("mainFrame créé") -- Débogage
+
+    local mainCorner = Instance.new("UICorner")
+    mainCorner.CornerRadius = UDim.new(0, 8)
+    mainCorner.Parent = mainFrame
+
+    local mainShadow = Instance.new("ImageLabel")
+    mainShadow.Size = UDim2.new(1, 20, 1, 20)
+    mainShadow.Position = UDim2.new(0, -10, 0, -10)
+    mainShadow.BackgroundTransparency = 1
+    mainShadow.Image = "rbxassetid://6014261993"
+    mainShadow.ImageColor3 = Color3.fromRGB(0, 0, 0)
+    mainShadow.ImageTransparency = 0.7
+    mainShadow.ScaleType = Enum.ScaleType.Slice
+    mainShadow.SliceCenter = Rect.new(10, 10, 10, 10)
+    mainShadow.Parent = mainFrame
+    mainShadow.ZIndex = -1
+
+    local titleLabel = Instance.new("TextLabel")
+    titleLabel.Size = UDim2.new(1, 0, 0, 20)
+    titleLabel.BackgroundTransparency = 1
+    titleLabel.Text = "CLX"
+    titleLabel.TextColor3 = Color3.fromRGB(255, 20, 147) -- Rouge néon
+    titleLabel.TextSize = 14
+    titleLabel.Font = Enum.Font.GothamBold
+    titleLabel.Parent = mainFrame
+
+    triggerBotLabel = Instance.new("TextLabel")
+    triggerBotLabel.Size = UDim2.new(1, 0, 0, 20)
+    triggerBotLabel.Position = UDim2.new(0, 5, 0, 25)
+    triggerBotLabel.BackgroundTransparency = 1
+    triggerBotLabel.Text = "TriggerBot: OFF"
+    triggerBotLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+    triggerBotLabel.TextSize = 12
+    triggerBotLabel.Font = Enum.Font.Gotham
+    triggerBotLabel.TextXAlignment = Enum.TextXAlignment.Left
+    triggerBotLabel.Parent = mainFrame
+
+    silentAimLabel = Instance.new("TextLabel")
+    silentAimLabel.Size = UDim2.new(1, 0, 0, 20)
+    silentAimLabel.Position = UDim2.new(0, 5, 0, 45)
+    silentAimLabel.BackgroundTransparency = 1
+    silentAimLabel.Text = "Silent Aim: OFF"
+    silentAimLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+    silentAimLabel.TextSize = 12
+    silentAimLabel.Font = Enum.Font.Gotham
+    silentAimLabel.TextXAlignment = Enum.TextXAlignment.Left
+    silentAimLabel.Parent = mainFrame
+
+    fovVisibilityLabel = Instance.new("TextLabel")
+    fovVisibilityLabel.Size = UDim2.new(1, 0, 0, 20)
+    fovVisibilityLabel.Position = UDim2.new(0, 5, 0, 65)
+    fovVisibilityLabel.BackgroundTransparency = 1
+    fovVisibilityLabel.Text = "FOV Visible: ON"
+    fovVisibilityLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+    fovVisibilityLabel.TextSize = 12
+    fovVisibilityLabel.Font = Enum.Font.Gotham
+    fovVisibilityLabel.TextXAlignment = Enum.TextXAlignment.Left
+    fovVisibilityLabel.Parent = mainFrame
+
+    silentAimFOVLabel = Instance.new("TextLabel")
+    silentAimFOVLabel.Size = UDim2.new(1, 0, 0, 20)
+    silentAimFOVLabel.Position = UDim2.new(0, 5, 0, 85)
+    silentAimFOVLabel.BackgroundTransparency = 1
+    silentAimFOVLabel.Text = "Silent Aim FOV: " .. Settings.SilentAimFOV
+    silentAimFOVLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+    silentAimFOVLabel.TextSize = 12
+    silentAimFOVLabel.Font = Enum.Font.Gotham
+    silentAimFOVLabel.TextXAlignment = Enum.TextXAlignment.Left
+    silentAimFOVLabel.Parent = mainFrame
+    print("Labels créés") -- Débogage
+
+    local scrollingFrame = Instance.new("ScrollingFrame")
+    scrollingFrame.Size = UDim2.new(1, -10, 0, 130)
+    scrollingFrame.Position = UDim2.new(0, 5, 0, 105)
+    scrollingFrame.BackgroundTransparency = 1
+    scrollingFrame.ScrollBarThickness = 3
+    scrollingFrame.ScrollBarImageColor3 = Color3.fromRGB(100, 100, 100)
+    scrollingFrame.CanvasSize = UDim2.new(0, 0, 0, 210)
+    scrollingFrame.Parent = mainFrame
+    print("ScrollingFrame créé") -- Débogage
+
+    local function createSlider(labelText, settingKey, min, max, posY)
+        local label = Instance.new("TextLabel")
+        label.Size = UDim2.new(0, 260, 0, 20)
+        label.Position = UDim2.new(0, 5, 0, posY)
+        label.BackgroundTransparency = 1
+        label.Text = labelText .. ": " .. Settings[settingKey]
+        label.TextColor3 = Color3.fromRGB(180, 180, 180)
+        label.TextSize = 12
+        label.Font = Enum.Font.Gotham
+        label.Parent = scrollingFrame
+        local slider = Instance.new("TextBox")
+        slider.Size = UDim2.new(0, 240, 0, 20)
+        slider.Position = UDim2.new(0, 5, 0, posY + 20)
+        slider.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+        slider.Text = tostring(Settings[settingKey])
+        slider.TextColor3 = Color3.fromRGB(255, 255, 255)
+        slider.TextSize = 12
+        slider.Parent = scrollingFrame
+        local corner = Instance.new("UICorner")
+        corner.CornerRadius = UDim.new(0, 4)
+        corner.Parent = slider
+        slider.FocusLost:Connect(function()
+            local value = tonumber(slider.Text)
+            if value and value >= min and value <= max then
+                Settings[settingKey] = value
+                label.Text = labelText .. ": " .. value
+                if settingKey == "SilentAimFOV" then
+                    silentAimFOVLabel.Text = "Silent Aim FOV: " .. value
+                    silentAimCircle.Radius = value
+                end
+            else
+                slider.Text = tostring(Settings[settingKey])
+            end
+        end)
+    end
+
+    local function createKeybind(labelText, settingKey, defaultKey, posY)
+        local label = Instance.new("TextLabel")
+        label.Size = UDim2.new(0, 260, 0, 20)
+        label.Position = UDim2.new(0, 5, 0, posY)
+        label.BackgroundTransparency = 1
+        label.Text = labelText .. ": " .. tostring(defaultKey):match("KeyCode%.(.+)")
+        label.TextColor3 = Color3.fromRGB(180, 180, 180)
+        label.TextSize = 12
+        label.Font = Enum.Font.Gotham
+        label.Parent = scrollingFrame
+        local input = Instance.new("TextButton")
+        input.Size = UDim2.new(0, 240, 0, 20)
+        input.Position = UDim2.new(0, 5, 0, posY + 20)
+        input.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+        input.Text = tostring(defaultKey):match("KeyCode%.(.+)")
+        input.TextColor3 = Color3.fromRGB(255, 255, 255)
+        input.TextSize = 12
+        input.Parent = scrollingFrame
+        local corner = Instance.new("UICorner")
+        corner.CornerRadius = UDim.new(0, 4)
+        corner.Parent = input
+        input.MouseButton1Click:Connect(function()
+            input.Text = "Press Key..."
+            local connection
+            connection = UIS.InputBegan:Connect(function(key)
+                if key.KeyCode ~= Enum.KeyCode.Unknown then
+                    Settings.Keybinds[settingKey] = key.KeyCode
+                    input.Text = tostring(key.KeyCode):match("KeyCode%.(.+)")
+                    label.Text = labelText .. ": " .. input.Text
+                    connection:Disconnect()
+                end
+            end)
+        end)
+    end
+
+    createSlider("Silent FOV", "SilentAimFOV", 1, 500, 5)
+    createSlider("Prediction", "Prediction", 0, 1, 35)
+    createKeybind("Silent Aim Key", "ToggleSilentAim", Settings.Keybinds.ToggleSilentAim, 65)
+    createKeybind("TriggerBot Key", "ToggleTriggerBot", Settings.Keybinds.ToggleTriggerBot, 95)
+    createKeybind("Close Menu Key", "CloseMenu", Settings.Keybinds.CloseMenu, 125)
+    createKeybind("Toggle FOV Visibility", "ToggleFOVVisibility", Settings.Keybinds.ToggleFOVVisibility, 155)
+    print("Sliders et keybinds créés") -- Débogage
 
     local dragging = false
     local dragStart = nil
@@ -242,186 +302,156 @@ local function createGUI()
         end
     end)
 
-    print("GUI créé et affiché")
+    print("Fin de createGUI") -- Débogage
+    return gui, silentAimCircle, triggerBotCircle, mainFrame, triggerBotLabel, silentAimLabel, fovVisibilityLabel, silentAimFOVLabel
 end
 
-UIS.InputBegan:Connect(function(input)
-    if input.KeyCode == Enum.KeyCode[configs.main.GuiKey] then
-        print("Touche M détectée")
-        if gui then
-            gui.Enabled = not gui.Enabled
-            print("GUI état changé :", gui.Enabled)
-        else
-            createGUI()
-            print("GUI créé via touche M")
-        end
-    end
-end)
+-- Vérifier PlayerGui avant l'initialisation
+while not LP.PlayerGui do
+    wait()
+end
+print("PlayerGui prêt, initialisation GUI") -- Débogage
 
+-- Initialisation du GUI au démarrage
+gui, silentAimCircle, triggerBotCircle, mainFrame, triggerBotLabel, silentAimLabel, fovVisibilityLabel, silentAimFOVLabel = createGUI()
+print("GUI initialisé") -- Débogage
+
+-- Nettoyage des anciens cercles Drawing
 local function cleanupDrawing()
     if silentAimCircle then
         silentAimCircle:Remove()
         silentAimCircle = nil
     end
+    if triggerBotCircle then
+        triggerBotCircle:Remove()
+        triggerBotCircle = nil
+    end
 end
 
-LP.CharacterAdded:Connect(function()
+-- Gestion du respawn : nettoyer sans créer le GUI
+LP.CharacterAdded:Connect(function(character)
+    print("Respawn détecté, nettoyage GUI") -- Débogage
     cleanupDrawing()
     if gui then
-        gui.Enabled = false
-        print("GUI désactivé après respawn")
+        gui:Destroy()
+        gui = nil
+        mainFrame = nil
+        triggerBotLabel = nil
+        silentAimLabel = nil
+        fovVisibilityLabel = nil
+        silentAimFOVLabel = nil
     end
-    connectTool(LP.Character)
+    connectTool(character)
 end)
 
-local previousPosition = nil
-local previousTime = nil
-local function NewVelocity(object)
-    local currentPosition = object.Position
-    local currentTime = tick()
-    if previousPosition and previousTime then
-        local deltaTime = currentTime - previousTime
-        local velocity = (currentPosition - previousPosition) / deltaTime
-        object.Velocity = velocity
+local function toggleMenu()
+    print("toggleMenu appelé") -- Débogage
+    if not gui then
+        gui, silentAimCircle, triggerBotCircle, mainFrame, triggerBotLabel, silentAimLabel, fovVisibilityLabel, silentAimFOVLabel = createGUI()
+        print("Nouveau GUI créé via toggleMenu") -- Débogage
+    elseif mainFrame then
+        mainFrame.Visible = not mainFrame.Visible
+        print("Visibilité togglée : " .. tostring(mainFrame.Visible)) -- Débogage
     end
-    previousPosition = currentPosition
-    previousTime = currentTime
 end
 
-local function FindClosestUser()
-    local closestPlayer
-    local shortestDistance = configs.main.SilentAimFOV
-    for _, v in pairs(Players:GetPlayers()) do
-        if v ~= LP and v.Character and v.Character:FindFirstChild("Humanoid") and v.Character.Humanoid.Health > 0 then
+-- Fonction pour obtenir la position cible
+local function getTargetPosition(part)
+    if not part then return nil end
+    local targetPos = part.Position + (part.Velocity * Settings.Prediction)
+    return targetPos
+end
+
+-- Fonction pour obtenir le joueur le plus proche
+local function getClosestPlayer(fov)
+    local target = nil
+    local closestPart = nil
+    local minDistance = fov
+    for _, player in pairs(Players:GetPlayers()) do
+        if player ~= LP and player.Character and player.Character:FindFirstChild("Humanoid") and player.Character.Humanoid.Health > 0 then
             local parts = {}
-            for _, part in pairs(v.Character:GetChildren()) do
+            for _, part in pairs(player.Character:GetChildren()) do
                 if part:IsA("BasePart") then
                     table.insert(parts, part)
                 end
             end
             if #parts > 0 then
-                local closestPart = nil
-                local minPartDistance = math.huge
-                for _, part in pairs(parts) do
-                    local pos = Camera:WorldToViewportPoint(part.Position)
-                    local magnitude = (Vector2.new(pos.X, pos.Y) - UIS:GetMouseLocation()).Magnitude
-                    if magnitude < minPartDistance then
-                        minPartDistance = magnitude
-                        closestPart = part
+                local selectedPart = parts[math.random(1, #parts)]
+                local viewportPos, onScreen = Camera:WorldToViewportPoint(selectedPart.Position)
+                if onScreen then
+                    local distance = (UIS:GetMouseLocation() - Vector2.new(viewportPos.X, viewportPos.Y)).Magnitude
+                    if distance < minDistance then
+                        minDistance = distance
+                        target = player
+                        closestPart = selectedPart
                     end
-                end
-                if minPartDistance < shortestDistance then
-                    closestPlayer = v
-                    shortestDistance = minPartDistance
                 end
             end
         end
     end
-    return closestPlayer
+    return target, closestPart
 end
 
-local function getClosestPlayer()
-    local target, part = nil, nil
-    local minDistance = configs.main.SilentAimFOV
+-- Fonction pour obtenir tous les joueurs dans le FOV (TriggerBot)
+local function getAllPlayersInFOV(fov)
+    local targets = {}
+    local mousePos = UIS:GetMouseLocation()
     for _, player in pairs(Players:GetPlayers()) do
         if player ~= LP and player.Character and player.Character:FindFirstChild("Humanoid") and player.Character.Humanoid.Health > 0 then
-            local parts = {}
-            for _, p in pairs(player.Character:GetChildren()) do
-                if p:IsA("BasePart") then
-                    table.insert(parts, p)
-                end
-            end
-            if #parts > 0 then
-                local closestPart = nil
-                local minPartDistance = math.huge
-                for _, p in pairs(parts) do
-                    local pos, onScreen = Camera:WorldToViewportPoint(p.Position)
+            for _, part in pairs(player.Character:GetChildren()) do
+                if part:IsA("BasePart") then
+                    local viewportPos, onScreen = Camera:WorldToViewportPoint(part.Position)
                     if onScreen then
-                        local distance = (UIS:GetMouseLocation() - Vector2.new(pos.X, pos.Y)).Magnitude
-                        if distance < minPartDistance then
-                            minPartDistance = distance
-                            closestPart = p
+                        local distance = (Vector2.new(viewportPos.X, viewportPos.Y) - mousePos).Magnitude
+                        if distance <= fov then
+                            table.insert(targets, {Player = player, Part = part})
                         end
                     end
                 end
-                if minPartDistance < minDistance then
-                    minDistance = minPartDistance
-                    target = player
-                    part = closestPart
-                end
             end
         end
     end
-    return target, part
+    return targets
 end
 
-local silentTarget = nil
-local silentHitbox = nil
-local function getTargetPosition(part, prediction)
-    if not part then return nil end
-    if part.Parent and part.Parent:FindFirstChild("Humanoid") and part.Parent.Humanoid.FloorMaterial == Enum.Material.Air then
-        return nil
-    end
-    return part.Position + (part.Velocity * prediction)
-end
-
-local CurrentlyPressed = false
+-- Mise à jour des cercles et des cibles
 RS.RenderStepped:Connect(function()
-    if silentAimCircle then
-        silentAimCircle.Position = UIS:GetMouseLocation()
-        silentAimCircle.Visible = configs.main.FOVVisible
-    end
-    if configs.main.SilentAimEnabled then
-        silentTarget, silentHitbox = getClosestPlayer()
-        if silentTarget and silentTarget.Character and silentTarget.Character:FindFirstChild("HumanoidRootPart") and silentTarget.Character.HumanoidRootPart.Velocity.Magnitude > configs.main.ResolverVelocity then
-            NewVelocity(silentTarget.Character.HumanoidRootPart)
+    if isUnlocked then
+        if silentAimCircle then
+            silentAimCircle.Position = UIS:GetMouseLocation()
+            silentAimCircle.Visible = States.FOVVisible and States.SilentAim
         end
-    else
-        silentTarget = nil
-        silentHitbox = nil
-    end
-    if configs.main.TriggerBotEnabled then
-        local target = FindClosestUser()
-        if target and target.Character and target.Character:FindFirstChild("HumanoidRootPart") then
-            local predictedPos = getTargetPosition(target.Character.HumanoidRootPart, configs.main.TriggerBotPrediction)
-            if predictedPos then
-                if not CurrentlyPressed then
-                    CurrentlyPressed = true
-                    mouse1press()
-                end
-            else
-                if CurrentlyPressed then
-                    CurrentlyPressed = false
-                    mouse1release()
-                end
-            end
+        if triggerBotCircle then
+            triggerBotCircle.Position = UIS:GetMouseLocation()
+            triggerBotCircle.Visible = States.FOVVisible and States.TriggerBot
+        end
+        if States.SilentAim then
+            silentTarget, silentHitbox = getClosestPlayer(Settings.SilentAimFOV)
         else
-            if CurrentlyPressed then
-                CurrentlyPressed = false
-                mouse1release()
-            end
+            silentTarget = nil
+            silentHitbox = nil
         end
-    else
-        if CurrentlyPressed then
-            CurrentlyPressed = false
-            mouse1release()
+        if States.TriggerBot then
+            triggerTargets = getAllPlayersInFOV(Settings.TriggerBotFOV)
+        else
+            triggerTargets = {}
+        end
+        if triggerBotLabel then
+            triggerBotLabel.Text = "TriggerBot: " .. (States.TriggerBot and "ON" or "OFF")
+        end
+        if silentAimLabel then
+            silentAimLabel.Text = "Silent Aim: " .. (States.SilentAim and "ON" or "OFF")
+        end
+        if fovVisibilityLabel then
+            fovVisibilityLabel.Text = "FOV Visible: " .. (States.FOVVisible and "ON" or "OFF")
         end
     end
 end)
 
-Mouse.KeyDown:Connect(function(key)
-    if key == configs.main.SilentAimKey then
-        configs.main.SilentAimEnabled = not configs.main.SilentAimEnabled
-        print("Silent Aim état :", configs.main.SilentAimEnabled)
-    elseif key == configs.main.TriggerBotKey then
-        configs.main.TriggerBotEnabled = not configs.main.TriggerBotEnabled
-        print("TriggerBot état :", configs.main.TriggerBotEnabled)
-    end
-end)
-
+-- Fonction pour tirer (Silent Aim)
 local function bulletHooker(target, part)
     if List[game.PlaceId] and target and target.Character and part then
-        local targetPos = getTargetPosition(part, configs.main.SilentAimPrediction)
+        local targetPos = getTargetPosition(part)
         if not targetPos then
             targetPos = part.Position
         end
@@ -430,12 +460,35 @@ local function bulletHooker(target, part)
     end
 end
 
+local lastTriggerTime = 0
+local function triggerBotFire()
+    if States.TriggerBot and LP.Character then
+        local tool = LP.Character:FindFirstChildOfClass("Tool")
+        if tool then
+            for _, target in pairs(triggerTargets) do
+                local player = target.Player
+                local part = target.Part
+                if player.Character and part then
+                    local currentTime = tick()
+                    local delay = 0.05
+                    if currentTime - lastTriggerTime >= delay then
+                        tool:Activate()
+                        bulletHooker(player, part)
+                        lastTriggerTime = currentTime
+                        break
+                    end
+                end
+            end
+        end
+    end
+end
+
 local function connectTool(character)
     if character then
         character.ChildAdded:Connect(function(child)
             if child:IsA("Tool") then
                 child.Activated:Connect(function()
-                    if configs.main.SilentAimEnabled and silentTarget and silentHitbox then
+                    if States.SilentAim and silentTarget and silentHitbox then
                         bulletHooker(silentTarget, silentHitbox)
                     end
                 end)
@@ -447,5 +500,22 @@ end
 LP.CharacterAdded:Connect(connectTool)
 if LP.Character then connectTool(LP.Character) end
 
--- Créer le GUI immédiatement pour s’assurer qu’il s’affiche
-createGUI()
+UIS.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 and States.TriggerBot then
+        triggerBotFire()
+    elseif input.KeyCode == Settings.Keybinds.CloseMenu then
+        toggleMenu()
+    elseif input.KeyCode == Settings.Keybinds.ToggleSilentAim then
+        States.SilentAim = not States.SilentAim
+    elseif input.KeyCode == Settings.Keybinds.ToggleTriggerBot then
+        States.TriggerBot = not States.TriggerBot
+    elseif input.KeyCode == Settings.Keybinds.ToggleFOVVisibility then
+        States.FOVVisible = not States.FOVVisible
+    end
+end)
+
+RS.RenderStepped:Connect(function()
+    if States.TriggerBot then
+        triggerBotFire()
+    end
+end)
