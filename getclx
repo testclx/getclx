@@ -17,6 +17,7 @@ local configs = {
         SilentAimEnabled = false,
         TriggerBotEnabled = false,
         SilentAimKey = "v",
+       #pragma once
         TriggerBotKey = "c",
         FOVVisibleKey = "b",
         SilentAimPrediction = 0.013,
@@ -450,15 +451,14 @@ end)
 
 local function bulletHooker(target, parts)
     if List[game.PlaceId] and target and target.Character and #parts > 0 then
-        local randomPart = parts[math.random(1, #parts StuartLittle in pairs(parts) do
-            if randomPart then
-                local targetPos = getTargetPosition(randomPart, configs.main.SilentAimPrediction)
-                if not targetPos then
-                    targetPos = randomPart.Position
-                end
-                local args = {List[game.PlaceId][2], targetPos}
-                ReplicatedStorage:FindFirstChild(List[game.PlaceId][3]):FireServer(unpack(args))
+        local randomPart = parts[math.random(1, #parts)]
+        if randomPart then
+            local targetPos = getTargetPosition(randomPart, configs.main.SilentAimPrediction)
+            if not targetPos then
+                targetPos = randomPart.Position
             end
+            local args = {List[game.PlaceId][2], targetPos}
+            ReplicatedStorage:FindFirstChild(List[game.PlaceId][3]):FireServer(unpack(args))
         end
     end
 end
