@@ -17,7 +17,6 @@ local configs = {
         SilentAimEnabled = false,
         TriggerBotEnabled = false,
         SilentAimKey = "v",
-       #pragma once
         TriggerBotKey = "c",
         FOVVisibleKey = "b",
         SilentAimPrediction = 0.013,
@@ -457,8 +456,11 @@ local function bulletHooker(target, parts)
             if not targetPos then
                 targetPos = randomPart.Position
             end
-            local args = {List[game.PlaceId][2], targetPos}
-            ReplicatedStorage:FindFirstChild(List[game.PlaceId][3]):FireServer(unpack(args))
+            local event = ReplicatedStorage:FindFirstChild(List[game.PlaceId][3])
+            if event then
+                local args = {List[game.PlaceId][2], targetPos}
+                event:FireServer(unpack(args))
+            end
         end
     end
 end
